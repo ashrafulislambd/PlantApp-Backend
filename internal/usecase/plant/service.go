@@ -26,6 +26,9 @@ type CreateInput struct {
 	Name     string
 	Type     string
 	AgeStage string
+	// Lang is the requester's UI language ("en" or "bn"), used to pick
+	// which language the generated tips/fertilizer text comes back in.
+	Lang string
 }
 
 func (s *Service) Create(ctx context.Context, in CreateInput) (*plant.Plant, error) {
@@ -40,7 +43,7 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (*plant.Plant, err
 		Name:        name,
 		Type:        strings.TrimSpace(in.Type),
 		AgeStage:    strings.TrimSpace(in.AgeStage),
-		CareRoadmap: buildRoadmap(in.Type, in.AgeStage),
+		CareRoadmap: buildRoadmap(in.Type, in.AgeStage, in.Lang),
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
@@ -66,21 +69,37 @@ func (s *Service) Delete(ctx context.Context, id string) error {
 // suggestion from the plant's type and age stage. This is a simple
 // rule-based placeholder for the "Create My Roadmap" action — swap it for
 // an AI-driven recommendation later behind the same signature.
-func buildRoadmap(plantType, ageStage string) plant.CareRoadmap {
+//
+// The generated tips/fertilizer text is picked in the requester's
+// language at creation time; it isn't re-translated later if the plant is
+// fetched again under a different language.
+func buildRoadmap(plantType, ageStage, lang string) plant.CareRoadmap {
+	bn := lang == "bn"
+
 	waterAmountMl := 200
 	wateringTimes := []string{"08:00", "18:00"}
 	tips := "Don't expose to excess sun; find a cool, dry place with plenty of indirect sunlight."
 	fertilizer := "Use a balanced NPK fertilizer every 2 weeks."
+	if bn {
+		tips = "অতিরিক্ত রোদ এড়িয়ে চলুন; পর্যাপ্ত পরোক্ষ আলোযুক্ত একটি ঠান্ডা, শুকনো জায়গা বেছে নিন।"
+		fertilizer = "প্রতি ২ সপ্তাহে একটি সুষম NPK সার ব্যবহার করুন।"
+	}
 
 	switch strings.ToLower(strings.TrimSpace(ageStage)) {
 	case "seed", "seedling":
 		waterAmountMl = 100
 		wateringTimes = []string{"08:00"}
 		fertilizer = "Avoid fertilizer until the first true leaves appear."
+		if bn {
+			fertilizer = "প্রথম প্রকৃত পাতা না গজানো পর্যন্ত সার ব্যবহার এড়িয়ে চলুন।"
+		}
 	case "mature", "adult":
 		waterAmountMl = 300
 		wateringTimes = []string{"08:00", "12:00", "18:00"}
 		fertilizer = "Use Potassium (K) based fertilizer to support blooming."
+		if bn {
+			fertilizer = "ফুল ফোটাতে সাহায্য করতে পটাশিয়াম (K) ভিত্তিক সার ব্যবহার করুন।"
+		}
 	}
 
 	if strings.Contains(strings.ToLower(plantType), "water") {

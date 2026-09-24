@@ -7,6 +7,8 @@ import (
 	"net/http"
 
 	"myplantpal-backend/internal/domain/apperr"
+	"myplantpal-backend/internal/domain/diagnosis"
+	"myplantpal-backend/internal/interface/http/reqlocale"
 	"myplantpal-backend/internal/interface/http/respond"
 	diagnosisuc "myplantpal-backend/internal/usecase/diagnosis"
 )
@@ -50,7 +52,7 @@ func (h *DiagnosisHandler) Create(w http.ResponseWriter, r *http.Request) {
 		respond.Error(w, err)
 		return
 	}
-	respond.JSON(w, http.StatusCreated, d)
+	respond.JSON(w, http.StatusCreated, d.Localized(reqlocale.Resolve(r)))
 }
 
 // List handles the "Add to Log" history, optionally filtered by ?plantId=.
@@ -64,7 +66,12 @@ func (h *DiagnosisHandler) List(w http.ResponseWriter, r *http.Request) {
 		respond.Error(w, err)
 		return
 	}
-	respond.JSON(w, http.StatusOK, items)
+	lang := reqlocale.Resolve(r)
+	localized := make([]diagnosis.Diagnosis, len(items))
+	for i, item := range items {
+		localized[i] = item.Localized(lang)
+	}
+	respond.JSON(w, http.StatusOK, localized)
 }
 
 func (h *DiagnosisHandler) Get(w http.ResponseWriter, r *http.Request) {
@@ -73,5 +80,5 @@ func (h *DiagnosisHandler) Get(w http.ResponseWriter, r *http.Request) {
 		respond.Error(w, err)
 		return
 	}
-	respond.JSON(w, http.StatusOK, d)
+	respond.JSON(w, http.StatusOK, d.Localized(reqlocale.Resolve(r)))
 }
