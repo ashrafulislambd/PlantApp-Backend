@@ -1,11 +1,16 @@
 package diagnosis
 
-import "context"
+import (
+	"context"
+
+	"myplantpal-backend/internal/domain/aiprovider"
+)
 
 // AnalysisResult is what an AI provider returns for a submitted photo.
 type AnalysisResult struct {
-	Issue string
-	Cure  string
+	Issue    string
+	Cure     string
+	Provider aiprovider.Name
 }
 
 // Provider abstracts the AI plant-diagnosis backend. Per the project's hard

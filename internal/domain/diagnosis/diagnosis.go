@@ -18,4 +18,5 @@ type Diagnosis struct {
 	Cure       string    `json:"cure"`
 	Disclaimer string    `json:"disclaimer"`
 	CreatedAt  time.Time `json:"createdAt"`
+	Provider   string    `json:"provider,omitempty"`
 }

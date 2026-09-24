@@ -8,21 +8,25 @@ import (
 	"context"
 	"sync/atomic"
 
+	"myplantpal-backend/internal/domain/aiprovider"
 	"myplantpal-backend/internal/domain/diagnosis"
 )
 
 var mockDiagnoses = []diagnosis.AnalysisResult{
 	{
-		Issue: "Your plant is suffering from Phosphorus deficiency.",
-		Cure:  "Use Triple Superphosphate (TSP) or Single Superphosphate (SSP).",
+		Issue:    "Your plant is suffering from Phosphorus deficiency.",
+		Cure:     "Use Triple Superphosphate (TSP) or Single Superphosphate (SSP).",
+		Provider: aiprovider.Mock,
 	},
 	{
-		Issue: "Your plant shows early signs of Nitrogen deficiency (pale, yellowing leaves).",
-		Cure:  "Apply a nitrogen-rich homemade fertilizer, such as a banana peel and tea leaf soak.",
+		Issue:    "Your plant shows early signs of Nitrogen deficiency (pale, yellowing leaves).",
+		Cure:     "Apply a nitrogen-rich homemade fertilizer, such as a banana peel and tea leaf soak.",
+		Provider: aiprovider.Mock,
 	},
 	{
-		Issue: "Your plant's leaves show signs of Potassium deficiency (brown leaf edges).",
-		Cure:  "Work dried, crushed banana peels into the soil near the roots.",
+		Issue:    "Your plant's leaves show signs of Potassium deficiency (brown leaf edges).",
+		Cure:     "Work dried, crushed banana peels into the soil near the roots.",
+		Provider: aiprovider.Mock,
 	},
 }
 
