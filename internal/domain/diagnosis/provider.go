@@ -3,9 +3,13 @@ package diagnosis
 import "context"
 
 // AnalysisResult is what an AI provider returns for a submitted photo.
+// IssueBn/CureBn are optional Bengali translations; a real AI provider can
+// leave them empty and let the caller fall back to English.
 type AnalysisResult struct {
-	Issue string
-	Cure  string
+	Issue   string
+	Cure    string
+	IssueBn string
+	CureBn  string
 }
 
 // Provider abstracts the AI plant-diagnosis backend. Per the project's hard

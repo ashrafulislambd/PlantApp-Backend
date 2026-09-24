@@ -2,3 +2,4 @@
 *.md
 tmp/
 bin/
+.env

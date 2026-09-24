@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"myplantpal-backend/internal/config"
+	chatdomain "myplantpal-backend/internal/domain/chat"
+	diagnosisdomain "myplantpal-backend/internal/domain/diagnosis"
 	"myplantpal-backend/internal/idgen"
 	"myplantpal-backend/internal/infrastructure/ai"
 	"myplantpal-backend/internal/infrastructure/repository/memory"
@@ -34,11 +36,23 @@ func main() {
 	diagnosisRepo := memory.NewDiagnosisRepository()
 	chatRepo := memory.NewChatRepository()
 
+	var diagnosisProvider diagnosisdomain.Provider
+	var chatProvider chatdomain.ReplyProvider
+	if cfg.GroqAPIKey != "" {
+		diagnosisProvider = ai.NewGroqDiagnosisProvider(cfg.GroqAPIKey, cfg.GroqVisionModel)
+		chatProvider = ai.NewGroqChatReplyProvider(cfg.GroqAPIKey, cfg.GroqChatModel)
+		log.Println("AI Doctor / AI Chat: using Groq")
+	} else {
+		diagnosisProvider = ai.NewMockDiagnosisProvider()
+		chatProvider = ai.NewMockChatReplyProvider()
+		log.Println("AI Doctor / AI Chat: GROQ_API_KEY not set, using mock provider")
+	}
+
 	deps := v1.Dependencies{
 		PlantService:      plantuc.NewService(plantRepo, ids),
 		FertilizerService: fertilizeruc.NewService(fertilizerRepo, ids),
-		DiagnosisService:  diagnosisuc.NewService(diagnosisRepo, ai.NewMockDiagnosisProvider(), ids),
-		ChatService:       chatuc.NewService(chatRepo, ai.NewMockChatReplyProvider(), ids),
+		DiagnosisService:  diagnosisuc.NewService(diagnosisRepo, diagnosisProvider, ids),
+		ChatService:       chatuc.NewService(chatRepo, chatProvider, ids),
 	}
 
 	srv := &http.Server{
