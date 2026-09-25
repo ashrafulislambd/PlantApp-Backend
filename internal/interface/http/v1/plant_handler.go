@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"net/http"
 
-	"myplantpal-backend/internal/domain/apperr"
-	"myplantpal-backend/internal/interface/http/reqlocale"
-	"myplantpal-backend/internal/interface/http/respond"
-	plantuc "myplantpal-backend/internal/usecase/plant"
+	"plantpal-backend/internal/domain/apperr"
+	"plantpal-backend/internal/interface/http/reqlocale"
+	"plantpal-backend/internal/interface/http/respond"
+	plantuc "plantpal-backend/internal/usecase/plant"
 )
 
 type PlantHandler struct {
@@ -25,19 +25,14 @@ type createPlantRequest struct {
 	AgeStage string `json:"ageStage"`
 }
 
-// Create handles "Create My Roadmap" on the Maintainance screen.
 func (h *PlantHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var req createPlantRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respond.Error(w, fmt.Errorf("%w: invalid JSON body", apperr.ErrInvalidInput))
 		return
 	}
-
 	p, err := h.svc.Create(r.Context(), plantuc.CreateInput{
-		Name:     req.Name,
-		Type:     req.Type,
-		AgeStage: req.AgeStage,
-		Lang:     reqlocale.Resolve(r),
+		Name: req.Name, Type: req.Type, AgeStage: req.AgeStage, Lang: reqlocale.Resolve(r),
 	})
 	if err != nil {
 		respond.Error(w, err)

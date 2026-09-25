@@ -1,17 +1,13 @@
-// Package memory provides in-memory implementations of the domain
-// repository interfaces, guarded by mutexes. These are a stand-in for the
-// eventual MongoDB-backed implementations described in CLAUDE.md — swap
-// them out by constructing a different type that satisfies the same
-// domain.Repository interface; no usecase or handler code needs to change.
 package memory
 
 import (
 	"context"
 	"sort"
 	"sync"
+	"time"
 
-	"myplantpal-backend/internal/domain/apperr"
-	"myplantpal-backend/internal/domain/plant"
+	"plantpal-backend/internal/domain/apperr"
+	"plantpal-backend/internal/domain/plant"
 )
 
 type PlantRepository struct {
@@ -51,6 +47,16 @@ func (r *PlantRepository) List(_ context.Context) ([]*plant.Plant, error) {
 	return out, nil
 }
 
+func (r *PlantRepository) Update(_ context.Context, p *plant.Plant) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, ok := r.items[p.ID]; !ok {
+		return apperr.ErrNotFound
+	}
+	r.items[p.ID] = p
+	return nil
+}
+
 func (r *PlantRepository) Delete(_ context.Context, id string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -60,3 +66,17 @@ func (r *PlantRepository) Delete(_ context.Context, id string) error {
 	delete(r.items, id)
 	return nil
 }
+
+func (r *PlantRepository) ListDue(_ context.Context, before time.Time) ([]*plant.Plant, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	out := make([]*plant.Plant, 0)
+	for _, p := range r.items {
+		watering := !p.NextWateringAt.IsZero() && !p.NextWateringAt.After(before)
+		fertilizing := p.NextFertilizingAt != nil && !p.NextFertilizingAt.After(before)
+		if watering || fertilizing {
+			out = append(out, p)
+		}
+	}
+	return out, nil
+} 
