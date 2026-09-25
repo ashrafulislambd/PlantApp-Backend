@@ -5,10 +5,10 @@ import (
 	"errors"
 	"testing"
 
-	"myplantpal-backend/internal/domain/apperr"
-	"myplantpal-backend/internal/domain/chat"
-	"myplantpal-backend/internal/idgen"
-	"myplantpal-backend/internal/infrastructure/repository/memory"
+	"plantpal-backend/internal/domain/apperr"
+	"plantpal-backend/internal/domain/chat"
+	"plantpal-backend/internal/idgen"
+	"plantpal-backend/internal/infrastructure/repository/memory"
 )
 
 type stubReplyProvider struct {
@@ -16,8 +16,8 @@ type stubReplyProvider struct {
 	err   error
 }
 
-func (p stubReplyProvider) Reply(_ context.Context, _ []*chat.Message, _ string) (string, error) {
-	return p.reply, p.err
+func (p stubReplyProvider) Reply(_ context.Context, _ []*chat.Message, _ string) (chat.ReplyResult, error) {
+	return chat.ReplyResult{Text: p.reply, Provider: "stub"}, p.err
 }
 
 func newTestService(provider chat.ReplyProvider) *Service {
