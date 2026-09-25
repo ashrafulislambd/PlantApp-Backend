@@ -19,4 +19,5 @@ type Message struct {
 	Role      Role      `json:"role"`
 	Content   string    `json:"content"`
 	CreatedAt time.Time `json:"createdAt"`
+	Provider  string    `json:"provider,omitempty"`
 }

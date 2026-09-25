@@ -461,6 +461,11 @@ components:
         createdAt:
           type: string
           format: date-time
+        provider:
+          type: string
+          nullable: true
+          enum: [gemini, groq, mock]
+          description: Which AI backend produced this result.
 
     CreateDiagnosisRequest:
       type: object
@@ -489,6 +494,11 @@ components:
         createdAt:
           type: string
           format: date-time
+        provider:
+          type: string
+          nullable: true
+          enum: [gemini, groq, mock]
+          description: Which AI backend produced this reply (assistant messages only).
 
     SendChatRequest:
       type: object

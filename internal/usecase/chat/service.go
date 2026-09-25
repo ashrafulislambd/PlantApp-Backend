@@ -53,7 +53,7 @@ func (s *Service) Send(ctx context.Context, in SendInput) ([]*chat.Message, erro
 		return nil, err
 	}
 
-	replyText, err := s.provider.Reply(ctx, history, content)
+	result, err := s.provider.Reply(ctx, history, content)
 	if err != nil {
 		return nil, err
 	}
@@ -62,8 +62,9 @@ func (s *Service) Send(ctx context.Context, in SendInput) ([]*chat.Message, erro
 		ID:        s.ids.New("msg"),
 		SessionID: sessionID,
 		Role:      chat.RoleAssistant,
-		Content:   replyText,
+		Content:   result.Text,
 		CreatedAt: time.Now().UTC(),
+		Provider:  string(result.Provider),
 	}
 	if err := s.repo.Create(ctx, assistantMsg); err != nil {
 		return nil, err

@@ -8,27 +8,31 @@ import (
 	"context"
 	"sync/atomic"
 
+	"myplantpal-backend/internal/domain/aiprovider"
 	"myplantpal-backend/internal/domain/diagnosis"
 )
 
 var mockDiagnoses = []diagnosis.AnalysisResult{
 	{
-		Issue:   "Your plant is suffering from Phosphorus deficiency.",
-		Cure:    "Use Triple Superphosphate (TSP) or Single Superphosphate (SSP).",
-		IssueBn: "আপনার গাছটি ফসফরাসের অভাবে ভুগছে।",
-		CureBn:  "ট্রিপল সুপারফসফেট (TSP) অথবা সিঙ্গেল সুপারফসফেট (SSP) ব্যবহার করুন।",
+		Issue:    "Your plant is suffering from Phosphorus deficiency.",
+		Cure:     "Use Triple Superphosphate (TSP) or Single Superphosphate (SSP).",
+		IssueBn:  "আপনার গাছটি ফসফরাসের অভাবে ভুগছে।",
+		CureBn:   "ট্রিপল সুপারফসফেট (TSP) অথবা সিঙ্গেল সুপারফসফেট (SSP) ব্যবহার করুন।",
+		Provider: aiprovider.Mock,
 	},
 	{
-		Issue:   "Your plant shows early signs of Nitrogen deficiency (pale, yellowing leaves).",
-		Cure:    "Apply a nitrogen-rich homemade fertilizer, such as a banana peel and tea leaf soak.",
-		IssueBn: "আপনার গাছে নাইট্রোজেন ঘাটতির প্রাথমিক লক্ষণ দেখা যাচ্ছে (ফ্যাকাশে, হলুদ পাতা)।",
-		CureBn:  "কলার খোসা ও চা পাতা ভেজানো পানির মতো নাইট্রোজেন সমৃদ্ধ ঘরোয়া সার প্রয়োগ করুন।",
+		Issue:    "Your plant shows early signs of Nitrogen deficiency (pale, yellowing leaves).",
+		Cure:     "Apply a nitrogen-rich homemade fertilizer, such as a banana peel and tea leaf soak.",
+		IssueBn:  "আপনার গাছে নাইট্রোজেন ঘাটতির প্রাথমিক লক্ষণ দেখা যাচ্ছে (ফ্যাকাশে, হলুদ পাতা)।",
+		CureBn:   "কলার খোসা ও চা পাতা ভেজানো পানির মতো নাইট্রোজেন সমৃদ্ধ ঘরোয়া সার প্রয়োগ করুন।",
+		Provider: aiprovider.Mock,
 	},
 	{
-		Issue:   "Your plant's leaves show signs of Potassium deficiency (brown leaf edges).",
-		Cure:    "Work dried, crushed banana peels into the soil near the roots.",
-		IssueBn: "আপনার গাছের পাতায় পটাশিয়াম ঘাটতির লক্ষণ দেখা যাচ্ছে (পাতার কিনারা বাদামী)।",
-		CureBn:  "শুকনো, গুঁড়ো করা কলার খোসা গাছের মূলের কাছের মাটিতে মিশিয়ে দিন।",
+		Issue:    "Your plant's leaves show signs of Potassium deficiency (brown leaf edges).",
+		Cure:     "Work dried, crushed banana peels into the soil near the roots.",
+		IssueBn:  "আপনার গাছের পাতায় পটাশিয়াম ঘাটতির লক্ষণ দেখা যাচ্ছে (পাতার কিনারা বাদামী)।",
+		CureBn:   "শুকনো, গুঁড়ো করা কলার খোসা গাছের মূলের কাছের মাটিতে মিশিয়ে দিন।",
+		Provider: aiprovider.Mock,
 	},
 }
 

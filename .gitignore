@@ -1,3 +1,33 @@
+# Binaries and build artifacts
 /bin/
 /tmp/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Coverage
+*.cover
+coverage.txt
+coverage.html
+
+# Go workspace / dependency files
+go.work
+go.work.sum
+vendor/
+
+# Environment
 .env
+!.env.example
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp

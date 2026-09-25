@@ -47,6 +47,7 @@ func (s *Service) Analyze(ctx context.Context, in AnalyzeInput) (*diagnosis.Diag
 		CureBn:       result.CureBn,
 		DisclaimerBn: diagnosis.DisclaimerBn,
 		CreatedAt:    time.Now().UTC(),
+		Provider:     string(result.Provider),
 	}
 	if err := s.repo.Create(ctx, d); err != nil {
 		return nil, err

@@ -10,8 +10,8 @@ import "time"
 const Disclaimer = "This result is AI-assisted and may be inaccurate. " +
 	"It is not a substitute for professional horticultural or botanical advice."
 
-const DisclaimerBn = "এই ফলাফল AI-সহায়তায় প্রাপ্ত এবং ভুল হতে পারে। " +
-	"এটি পেশাদার উদ্ভিদবিদ্যা পরামর্শের বিকল্প নয়।"
+const DisclaimerBn = "এই ফলাফল AI-সহায়তায় প্রাপ্ত এবং ভুল হতে পারে। " +
+	"এটি পেশাদার উদ্ভিদবিদ্যা পরামর্শের বিকল্প নয়।"
 
 // Diagnosis is the result of analyzing a plant photo.
 //
@@ -25,6 +25,7 @@ type Diagnosis struct {
 	Cure       string    `json:"cure"`
 	Disclaimer string    `json:"disclaimer"`
 	CreatedAt  time.Time `json:"createdAt"`
+	Provider   string    `json:"provider,omitempty"`
 
 	IssueBn      string `json:"-"`
 	CureBn       string `json:"-"`
