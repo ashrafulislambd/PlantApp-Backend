@@ -12,10 +12,11 @@ func strPtr(s string) *string { return &s }
 func TestDiagnosisRepository_List_FiltersByPlantID(t *testing.T) {
 	repo := NewDiagnosisRepository()
 	ctx := context.Background()
+	userID := "user_1"
 
-	forPlantA := &diagnosis.Diagnosis{ID: "diag_a", PlantID: strPtr("pl_a"), Issue: "A"}
-	forPlantB := &diagnosis.Diagnosis{ID: "diag_b", PlantID: strPtr("pl_b"), Issue: "B"}
-	noPlant := &diagnosis.Diagnosis{ID: "diag_c", Issue: "C"}
+	forPlantA := &diagnosis.Diagnosis{ID: "diag_a", UserID: userID, PlantID: strPtr("pl_a"), Issue: "A"}
+	forPlantB := &diagnosis.Diagnosis{ID: "diag_b", UserID: userID, PlantID: strPtr("pl_b"), Issue: "B"}
+	noPlant := &diagnosis.Diagnosis{ID: "diag_c", UserID: userID, Issue: "C"}
 
 	for _, d := range []*diagnosis.Diagnosis{forPlantA, forPlantB, noPlant} {
 		if err := repo.Create(ctx, d); err != nil {
@@ -23,7 +24,7 @@ func TestDiagnosisRepository_List_FiltersByPlantID(t *testing.T) {
 		}
 	}
 
-	all, err := repo.List(ctx, nil)
+	all, err := repo.List(ctx, userID, nil)
 	if err != nil {
 		t.Fatalf("List(nil) error = %v", err)
 	}
@@ -31,7 +32,7 @@ func TestDiagnosisRepository_List_FiltersByPlantID(t *testing.T) {
 		t.Fatalf("List(nil) returned %d items, want 3", len(all))
 	}
 
-	filtered, err := repo.List(ctx, strPtr("pl_a"))
+	filtered, err := repo.List(ctx, userID, strPtr("pl_a"))
 	if err != nil {
 		t.Fatalf("List(pl_a) error = %v", err)
 	}
@@ -39,7 +40,7 @@ func TestDiagnosisRepository_List_FiltersByPlantID(t *testing.T) {
 		t.Errorf("List(pl_a) = %+v, want just diag_a", filtered)
 	}
 
-	none, err := repo.List(ctx, strPtr("pl_unknown"))
+	none, err := repo.List(ctx, userID, strPtr("pl_unknown"))
 	if err != nil {
 		t.Fatalf("List(pl_unknown) error = %v", err)
 	}
@@ -50,7 +51,7 @@ func TestDiagnosisRepository_List_FiltersByPlantID(t *testing.T) {
 
 func TestDiagnosisRepository_GetByID_NotFound(t *testing.T) {
 	repo := NewDiagnosisRepository()
-	if _, err := repo.GetByID(context.Background(), "missing"); err == nil {
+	if _, err := repo.GetByID(context.Background(), "missing", "user_1"); err == nil {
 		t.Error("GetByID() error = nil, want not-found error")
 	}
 }

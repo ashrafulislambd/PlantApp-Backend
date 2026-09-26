@@ -24,8 +24,10 @@ func NewService(repo chat.Repository, provider chat.ReplyProvider, ids idgen.Gen
 }
 
 type SendInput struct {
+	UserID    string
 	SessionID string
 	Content   string
+	Lang      string
 }
 
 // Send stores the user's message, generates an assistant reply, stores
@@ -36,14 +38,18 @@ func (s *Service) Send(ctx context.Context, in SendInput) ([]*chat.Message, erro
 	if sessionID == "" || content == "" {
 		return nil, fmt.Errorf("%w: sessionId and content are required", apperr.ErrInvalidInput)
 	}
+	if in.UserID == "" {
+		return nil, fmt.Errorf("%w: userID is required", apperr.ErrInvalidInput)
+	}
 
-	history, err := s.repo.ListBySession(ctx, sessionID)
+	history, err := s.repo.ListBySession(ctx, in.UserID, sessionID)
 	if err != nil {
 		return nil, err
 	}
 
 	userMsg := &chat.Message{
 		ID:        s.ids.New("msg"),
+		UserID:    in.UserID,
 		SessionID: sessionID,
 		Role:      chat.RoleUser,
 		Content:   content,
@@ -53,17 +59,19 @@ func (s *Service) Send(ctx context.Context, in SendInput) ([]*chat.Message, erro
 		return nil, err
 	}
 
-	replyText, err := s.provider.Reply(ctx, history, content)
+	result, err := s.provider.Reply(ctx, history, content, in.Lang)
 	if err != nil {
 		return nil, err
 	}
 
 	assistantMsg := &chat.Message{
 		ID:        s.ids.New("msg"),
+		UserID:    in.UserID,
 		SessionID: sessionID,
 		Role:      chat.RoleAssistant,
-		Content:   replyText,
+		Content:   result.Text,
 		CreatedAt: time.Now().UTC(),
+		Provider:  string(result.Provider),
 	}
 	if err := s.repo.Create(ctx, assistantMsg); err != nil {
 		return nil, err
@@ -72,6 +80,6 @@ func (s *Service) Send(ctx context.Context, in SendInput) ([]*chat.Message, erro
 	return []*chat.Message{userMsg, assistantMsg}, nil
 }
 
-func (s *Service) List(ctx context.Context, sessionID string) ([]*chat.Message, error) {
-	return s.repo.ListBySession(ctx, sessionID)
+func (s *Service) List(ctx context.Context, userID, sessionID string) ([]*chat.Message, error) {
+	return s.repo.ListBySession(ctx, userID, sessionID)
 }

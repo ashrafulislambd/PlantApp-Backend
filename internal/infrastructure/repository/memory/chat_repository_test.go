@@ -13,9 +13,9 @@ func TestChatRepository_ListBySession_OrderedAndScopedToSession(t *testing.T) {
 	ctx := context.Background()
 	now := time.Now().UTC()
 
-	second := &chat.Message{ID: "msg_2", SessionID: "s1", Role: chat.RoleAssistant, Content: "second", CreatedAt: now}
-	first := &chat.Message{ID: "msg_1", SessionID: "s1", Role: chat.RoleUser, Content: "first", CreatedAt: now.Add(-time.Minute)}
-	otherSession := &chat.Message{ID: "msg_3", SessionID: "s2", Role: chat.RoleUser, Content: "other", CreatedAt: now}
+	second := &chat.Message{ID: "msg_2", UserID: "u1", SessionID: "s1", Role: chat.RoleAssistant, Content: "second", CreatedAt: now}
+	first := &chat.Message{ID: "msg_1", UserID: "u1", SessionID: "s1", Role: chat.RoleUser, Content: "first", CreatedAt: now.Add(-time.Minute)}
+	otherSession := &chat.Message{ID: "msg_3", UserID: "u1", SessionID: "s2", Role: chat.RoleUser, Content: "other", CreatedAt: now}
 
 	for _, m := range []*chat.Message{second, first, otherSession} {
 		if err := repo.Create(ctx, m); err != nil {
@@ -23,7 +23,7 @@ func TestChatRepository_ListBySession_OrderedAndScopedToSession(t *testing.T) {
 		}
 	}
 
-	got, err := repo.ListBySession(ctx, "s1")
+	got, err := repo.ListBySession(ctx, "u1", "s1")
 	if err != nil {
 		t.Fatalf("ListBySession() error = %v", err)
 	}
@@ -37,7 +37,7 @@ func TestChatRepository_ListBySession_OrderedAndScopedToSession(t *testing.T) {
 
 func TestChatRepository_ListBySession_UnknownSessionReturnsEmpty(t *testing.T) {
 	repo := NewChatRepository()
-	got, err := repo.ListBySession(context.Background(), "unknown")
+	got, err := repo.ListBySession(context.Background(), "u1", "unknown")
 	if err != nil {
 		t.Fatalf("ListBySession() error = %v", err)
 	}

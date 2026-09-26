@@ -32,6 +32,10 @@ func Error(w http.ResponseWriter, err error) {
 		status = http.StatusNotFound
 	case errors.Is(err, apperr.ErrInvalidInput):
 		status = http.StatusBadRequest
+	case errors.Is(err, apperr.ErrConflict):
+		status = http.StatusConflict
+	case errors.Is(err, apperr.ErrUnauthorized):
+		status = http.StatusUnauthorized
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)

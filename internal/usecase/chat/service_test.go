@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	"myplantpal-backend/internal/domain/aiprovider"
 	"myplantpal-backend/internal/domain/apperr"
 	"myplantpal-backend/internal/domain/chat"
 	"myplantpal-backend/internal/idgen"
@@ -16,8 +17,8 @@ type stubReplyProvider struct {
 	err   error
 }
 
-func (p stubReplyProvider) Reply(_ context.Context, _ []*chat.Message, _ string) (string, error) {
-	return p.reply, p.err
+func (p stubReplyProvider) Reply(_ context.Context, _ []*chat.Message, _ string, _ string) (chat.ReplyResult, error) {
+	return chat.ReplyResult{Text: p.reply, Provider: aiprovider.Mock}, p.err
 }
 
 func newTestService(provider chat.ReplyProvider) *Service {
@@ -29,8 +30,9 @@ func TestSend_RequiresSessionIDAndContent(t *testing.T) {
 	ctx := context.Background()
 
 	cases := []SendInput{
-		{SessionID: "", Content: "hello"},
-		{SessionID: "s1", Content: "  "},
+		{UserID: "user_1", SessionID: "", Content: "hello"},
+		{UserID: "user_1", SessionID: "s1", Content: "  "},
+		{UserID: "", SessionID: "s1", Content: "hello"},
 	}
 	for _, in := range cases {
 		if _, err := svc.Send(ctx, in); !errors.Is(err, apperr.ErrInvalidInput) {
@@ -43,7 +45,7 @@ func TestSend_StoresUserAndAssistantMessagesInOrder(t *testing.T) {
 	svc := newTestService(stubReplyProvider{reply: "an assistant reply"})
 	ctx := context.Background()
 
-	msgs, err := svc.Send(ctx, SendInput{SessionID: "s1", Content: "hello"})
+	msgs, err := svc.Send(ctx, SendInput{UserID: "user_1", SessionID: "s1", Content: "hello"})
 	if err != nil {
 		t.Fatalf("Send() error = %v", err)
 	}
@@ -57,7 +59,7 @@ func TestSend_StoresUserAndAssistantMessagesInOrder(t *testing.T) {
 		t.Errorf("msgs[1] = %+v, want assistant message with content %q", msgs[1], "an assistant reply")
 	}
 
-	history, err := svc.List(ctx, "s1")
+	history, err := svc.List(ctx, "user_1", "s1")
 	if err != nil {
 		t.Fatalf("List() error = %v", err)
 	}
@@ -69,7 +71,7 @@ func TestSend_StoresUserAndAssistantMessagesInOrder(t *testing.T) {
 func TestSend_PropagatesProviderError(t *testing.T) {
 	wantErr := errors.New("provider exploded")
 	svc := newTestService(stubReplyProvider{err: wantErr})
-	_, err := svc.Send(context.Background(), SendInput{SessionID: "s1", Content: "hello"})
+	_, err := svc.Send(context.Background(), SendInput{UserID: "user_1", SessionID: "s1", Content: "hello"})
 	if !errors.Is(err, wantErr) {
 		t.Errorf("Send() error = %v, want %v", err, wantErr)
 	}
@@ -77,7 +79,7 @@ func TestSend_PropagatesProviderError(t *testing.T) {
 
 func TestList_UnknownSessionReturnsEmpty(t *testing.T) {
 	svc := newTestService(stubReplyProvider{reply: "hi"})
-	list, err := svc.List(context.Background(), "unknown")
+	list, err := svc.List(context.Background(), "user_1", "unknown")
 	if err != nil {
 		t.Fatalf("List() error = %v", err)
 	}

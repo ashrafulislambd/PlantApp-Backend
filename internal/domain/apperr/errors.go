@@ -8,4 +8,6 @@ import "errors"
 var (
 	ErrNotFound     = errors.New("resource not found")
 	ErrInvalidInput = errors.New("invalid input")
+	ErrConflict     = errors.New("resource already exists")
+	ErrUnauthorized = errors.New("unauthorized")
 )

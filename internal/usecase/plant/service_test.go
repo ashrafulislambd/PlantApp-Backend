@@ -17,7 +17,7 @@ func newTestService() *Service {
 
 func TestCreate_RequiresName(t *testing.T) {
 	svc := newTestService()
-	_, err := svc.Create(context.Background(), CreateInput{Name: "  "})
+	_, err := svc.Create(context.Background(), CreateInput{UserID: "user_1", Name: "  "})
 	if !errors.Is(err, apperr.ErrInvalidInput) {
 		t.Errorf("Create() error = %v, want %v", err, apperr.ErrInvalidInput)
 	}
@@ -25,7 +25,7 @@ func TestCreate_RequiresName(t *testing.T) {
 
 func TestCreate_TrimsNameAndPersists(t *testing.T) {
 	svc := newTestService()
-	p, err := svc.Create(context.Background(), CreateInput{Name: "  Rose  ", Type: "Water based", AgeStage: "mature"})
+	p, err := svc.Create(context.Background(), CreateInput{UserID: "user_1", Name: "  Rose  ", Type: "Water based", AgeStage: "mature"})
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
@@ -33,7 +33,7 @@ func TestCreate_TrimsNameAndPersists(t *testing.T) {
 		t.Errorf("Name = %q, want %q", p.Name, "Rose")
 	}
 
-	fetched, err := svc.Get(context.Background(), p.ID)
+	fetched, err := svc.Get(context.Background(), p.ID, "user_1")
 	if err != nil {
 		t.Fatalf("Get() error = %v", err)
 	}
@@ -44,7 +44,7 @@ func TestCreate_TrimsNameAndPersists(t *testing.T) {
 
 func TestCreate_RoadmapBySeedAgeStage(t *testing.T) {
 	svc := newTestService()
-	p, err := svc.Create(context.Background(), CreateInput{Name: "Sprout", AgeStage: "seed"})
+	p, err := svc.Create(context.Background(), CreateInput{UserID: "user_1", Name: "Sprout", AgeStage: "seed"})
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
@@ -58,11 +58,10 @@ func TestCreate_RoadmapBySeedAgeStage(t *testing.T) {
 
 func TestCreate_RoadmapByMatureAgeStageAndWaterType(t *testing.T) {
 	svc := newTestService()
-	p, err := svc.Create(context.Background(), CreateInput{Name: "Rose", Type: "Water based", AgeStage: "mature"})
+	p, err := svc.Create(context.Background(), CreateInput{UserID: "user_1", Name: "Rose", Type: "Water based", AgeStage: "mature"})
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
-	// mature baseline (300) + water-based bonus (100)
 	if p.CareRoadmap.WaterAmountMl != 400 {
 		t.Errorf("WaterAmountMl = %d, want 400 for mature + water-based", p.CareRoadmap.WaterAmountMl)
 	}
@@ -76,7 +75,7 @@ func TestCreate_RoadmapByMatureAgeStageAndWaterType(t *testing.T) {
 
 func TestCreate_RoadmapDefaultAgeStage(t *testing.T) {
 	svc := newTestService()
-	p, err := svc.Create(context.Background(), CreateInput{Name: "Fern"})
+	p, err := svc.Create(context.Background(), CreateInput{UserID: "user_1", Name: "Fern"})
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
@@ -87,7 +86,7 @@ func TestCreate_RoadmapDefaultAgeStage(t *testing.T) {
 
 func TestCreate_RoadmapLocalizedToBengali(t *testing.T) {
 	svc := newTestService()
-	p, err := svc.Create(context.Background(), CreateInput{Name: "Rose", AgeStage: "mature", Lang: "bn"})
+	p, err := svc.Create(context.Background(), CreateInput{UserID: "user_1", Name: "Rose", AgeStage: "mature", Lang: "bn"})
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
@@ -101,7 +100,7 @@ func TestCreate_RoadmapLocalizedToBengali(t *testing.T) {
 
 func TestDelete_NotFound(t *testing.T) {
 	svc := newTestService()
-	err := svc.Delete(context.Background(), "missing")
+	err := svc.Delete(context.Background(), "missing", "user_1")
 	if !errors.Is(err, apperr.ErrNotFound) {
 		t.Errorf("Delete() error = %v, want %v", err, apperr.ErrNotFound)
 	}
@@ -110,14 +109,15 @@ func TestDelete_NotFound(t *testing.T) {
 func TestList_ReturnsCreatedPlants(t *testing.T) {
 	svc := newTestService()
 	ctx := context.Background()
-	if _, err := svc.Create(ctx, CreateInput{Name: "Rose"}); err != nil {
+	userID := "user_1"
+	if _, err := svc.Create(ctx, CreateInput{UserID: userID, Name: "Rose"}); err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
-	if _, err := svc.Create(ctx, CreateInput{Name: "Fern"}); err != nil {
+	if _, err := svc.Create(ctx, CreateInput{UserID: userID, Name: "Fern"}); err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
 
-	list, err := svc.List(ctx)
+	list, err := svc.List(ctx, userID)
 	if err != nil {
 		t.Fatalf("List() error = %v", err)
 	}

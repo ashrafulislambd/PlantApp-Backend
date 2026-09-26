@@ -1,9 +1,13 @@
-package fertilizer
+package fertilizer_test
 
-import "testing"
+import (
+	"testing"
+
+	"myplantpal-backend/internal/domain/fertilizer"
+)
 
 func TestFertilizer_Localized(t *testing.T) {
-	f := Fertilizer{
+	f := fertilizer.Fertilizer{
 		ID:             "fert_1",
 		Name:           "Nitrogen",
 		Category:       "Nitrogen",
@@ -31,13 +35,11 @@ func TestFertilizer_Localized(t *testing.T) {
 	})
 
 	t.Run("bengali falls back to english when no translation exists", func(t *testing.T) {
-		untranslated := Fertilizer{
+		untranslated := fertilizer.Fertilizer{
 			ID:           "fert_2",
 			Name:         "User Added Mix",
 			Category:     "Custom",
 			Instructions: "Whatever the user typed.",
-			// NameBn/CategoryBn/InstructionsBn intentionally left empty,
-			// as for a fertilizer a user adds themselves.
 		}
 		got := untranslated.Localized("bn")
 		if got.Name != untranslated.Name || got.Category != untranslated.Category || got.Instructions != untranslated.Instructions {

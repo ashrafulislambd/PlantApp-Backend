@@ -26,7 +26,7 @@ func newTestService(provider diagnosis.Provider) *Service {
 
 func TestAnalyze_RequiresImageData(t *testing.T) {
 	svc := newTestService(stubProvider{})
-	_, err := svc.Analyze(context.Background(), AnalyzeInput{ImageData: nil})
+	_, err := svc.Analyze(context.Background(), AnalyzeInput{UserID: "user_1", ImageData: nil})
 	if !errors.Is(err, apperr.ErrInvalidInput) {
 		t.Errorf("Analyze() error = %v, want %v", err, apperr.ErrInvalidInput)
 	}
@@ -41,8 +41,9 @@ func TestAnalyze_PersistsResultWithDisclaimerAndTranslations(t *testing.T) {
 	}}
 	svc := newTestService(provider)
 	plantID := "pl_1"
+	userID := "user_1"
 
-	d, err := svc.Analyze(context.Background(), AnalyzeInput{PlantID: &plantID, ImageData: []byte{1, 2, 3}})
+	d, err := svc.Analyze(context.Background(), AnalyzeInput{UserID: userID, PlantID: &plantID, ImageData: []byte{1, 2, 3}})
 	if err != nil {
 		t.Fatalf("Analyze() error = %v", err)
 	}
@@ -59,7 +60,7 @@ func TestAnalyze_PersistsResultWithDisclaimerAndTranslations(t *testing.T) {
 		t.Errorf("PlantID = %v, want %q", d.PlantID, plantID)
 	}
 
-	fetched, err := svc.Get(context.Background(), d.ID)
+	fetched, err := svc.Get(context.Background(), d.ID, userID)
 	if err != nil {
 		t.Fatalf("Get() error = %v", err)
 	}
@@ -71,7 +72,7 @@ func TestAnalyze_PersistsResultWithDisclaimerAndTranslations(t *testing.T) {
 func TestAnalyze_PropagatesProviderError(t *testing.T) {
 	wantErr := errors.New("provider exploded")
 	svc := newTestService(stubProvider{err: wantErr})
-	_, err := svc.Analyze(context.Background(), AnalyzeInput{ImageData: []byte{1}})
+	_, err := svc.Analyze(context.Background(), AnalyzeInput{UserID: "user_1", ImageData: []byte{1}})
 	if !errors.Is(err, wantErr) {
 		t.Errorf("Analyze() error = %v, want %v", err, wantErr)
 	}
@@ -82,15 +83,16 @@ func TestList_FiltersByPlantID(t *testing.T) {
 	ctx := context.Background()
 	plantA := "pl_a"
 	plantB := "pl_b"
+	userID := "user_1"
 
-	if _, err := svc.Analyze(ctx, AnalyzeInput{PlantID: &plantA, ImageData: []byte{1}}); err != nil {
+	if _, err := svc.Analyze(ctx, AnalyzeInput{UserID: userID, PlantID: &plantA, ImageData: []byte{1}}); err != nil {
 		t.Fatalf("Analyze() error = %v", err)
 	}
-	if _, err := svc.Analyze(ctx, AnalyzeInput{PlantID: &plantB, ImageData: []byte{1}}); err != nil {
+	if _, err := svc.Analyze(ctx, AnalyzeInput{UserID: userID, PlantID: &plantB, ImageData: []byte{1}}); err != nil {
 		t.Fatalf("Analyze() error = %v", err)
 	}
 
-	list, err := svc.List(ctx, &plantA)
+	list, err := svc.List(ctx, userID, &plantA)
 	if err != nil {
 		t.Fatalf("List() error = %v", err)
 	}

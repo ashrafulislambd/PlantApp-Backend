@@ -25,21 +25,24 @@ func (r *DiagnosisRepository) Create(_ context.Context, d *diagnosis.Diagnosis) 
 	return nil
 }
 
-func (r *DiagnosisRepository) GetByID(_ context.Context, id string) (*diagnosis.Diagnosis, error) {
+func (r *DiagnosisRepository) GetByID(_ context.Context, id, userID string) (*diagnosis.Diagnosis, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	d, ok := r.items[id]
-	if !ok {
+	if !ok || d.UserID != userID {
 		return nil, apperr.ErrNotFound
 	}
 	return d, nil
 }
 
-func (r *DiagnosisRepository) List(_ context.Context, plantID *string) ([]*diagnosis.Diagnosis, error) {
+func (r *DiagnosisRepository) List(_ context.Context, userID string, plantID *string) ([]*diagnosis.Diagnosis, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	out := make([]*diagnosis.Diagnosis, 0, len(r.items))
 	for _, d := range r.items {
+		if d.UserID != userID {
+			continue
+		}
 		if plantID != nil {
 			if d.PlantID == nil || *d.PlantID != *plantID {
 				continue

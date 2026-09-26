@@ -13,13 +13,14 @@ import (
 func TestPlantRepository_CreateAndGet(t *testing.T) {
 	repo := NewPlantRepository()
 	ctx := context.Background()
-	p := &plant.Plant{ID: "pl_1", Name: "Rose"}
+	userID := "user_1"
+	p := &plant.Plant{ID: "pl_1", UserID: userID, Name: "Rose"}
 
 	if err := repo.Create(ctx, p); err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
 
-	got, err := repo.GetByID(ctx, "pl_1")
+	got, err := repo.GetByID(ctx, "pl_1", userID)
 	if err != nil {
 		t.Fatalf("GetByID() error = %v", err)
 	}
@@ -30,7 +31,7 @@ func TestPlantRepository_CreateAndGet(t *testing.T) {
 
 func TestPlantRepository_GetByID_NotFound(t *testing.T) {
 	repo := NewPlantRepository()
-	_, err := repo.GetByID(context.Background(), "missing")
+	_, err := repo.GetByID(context.Background(), "missing", "user_1")
 	if !errors.Is(err, apperr.ErrNotFound) {
 		t.Errorf("GetByID() error = %v, want %v", err, apperr.ErrNotFound)
 	}
@@ -39,10 +40,11 @@ func TestPlantRepository_GetByID_NotFound(t *testing.T) {
 func TestPlantRepository_List_SortedByCreatedAt(t *testing.T) {
 	repo := NewPlantRepository()
 	ctx := context.Background()
+	userID := "user_1"
 	now := time.Now().UTC()
 
-	newer := &plant.Plant{ID: "pl_newer", Name: "Newer", CreatedAt: now}
-	older := &plant.Plant{ID: "pl_older", Name: "Older", CreatedAt: now.Add(-time.Hour)}
+	newer := &plant.Plant{ID: "pl_newer", UserID: userID, Name: "Newer", CreatedAt: now}
+	older := &plant.Plant{ID: "pl_older", UserID: userID, Name: "Older", CreatedAt: now.Add(-time.Hour)}
 
 	if err := repo.Create(ctx, newer); err != nil {
 		t.Fatalf("Create() error = %v", err)
@@ -51,7 +53,7 @@ func TestPlantRepository_List_SortedByCreatedAt(t *testing.T) {
 		t.Fatalf("Create() error = %v", err)
 	}
 
-	list, err := repo.List(ctx)
+	list, err := repo.List(ctx, userID)
 	if err != nil {
 		t.Fatalf("List() error = %v", err)
 	}
@@ -66,20 +68,21 @@ func TestPlantRepository_List_SortedByCreatedAt(t *testing.T) {
 func TestPlantRepository_Delete(t *testing.T) {
 	repo := NewPlantRepository()
 	ctx := context.Background()
-	p := &plant.Plant{ID: "pl_1", Name: "Rose"}
+	userID := "user_1"
+	p := &plant.Plant{ID: "pl_1", UserID: userID, Name: "Rose"}
 	_ = repo.Create(ctx, p)
 
-	if err := repo.Delete(ctx, "pl_1"); err != nil {
+	if err := repo.Delete(ctx, "pl_1", userID); err != nil {
 		t.Fatalf("Delete() error = %v", err)
 	}
-	if _, err := repo.GetByID(ctx, "pl_1"); !errors.Is(err, apperr.ErrNotFound) {
+	if _, err := repo.GetByID(ctx, "pl_1", userID); !errors.Is(err, apperr.ErrNotFound) {
 		t.Errorf("expected deleted plant to be not found, got err = %v", err)
 	}
 }
 
 func TestPlantRepository_Delete_NotFound(t *testing.T) {
 	repo := NewPlantRepository()
-	err := repo.Delete(context.Background(), "missing")
+	err := repo.Delete(context.Background(), "missing", "user_1")
 	if !errors.Is(err, apperr.ErrNotFound) {
 		t.Errorf("Delete() error = %v, want %v", err, apperr.ErrNotFound)
 	}
