@@ -87,7 +87,12 @@ const chatSystemPrompt = "You are the AI Doctor's chat assistant inside the Plan
 const diagnosisPrompt = `You are a plant pathologist. Look at this photo of a plant and identify ` +
 	`the single most likely issue (disease, pest, or nutrient deficiency) and a practical cure.
 Reply ONLY as valid JSON with exactly these keys:
-{"issue": "<short description of the problem>", "cure": "<short, actionable treatment>"}
+{
+  "issue": "<short description of the problem in English>",
+  "cure": "<short, actionable treatment in English>",
+  "issueBn": "<short description of the problem translated into natural Bengali/বাংলা>",
+  "cureBn": "<short, actionable treatment translated into natural Bengali/বাংলা>"
+}
 Do not add any text outside the JSON object.`
 
 // roleToGemini remaps the domain's chat roles onto Gemini's, which uses
@@ -149,7 +154,7 @@ func (c *Client) do(ctx context.Context, req geminiRequest) (string, error) {
 }
 
 // Reply implements chat.ReplyProvider.
-func (c *Client) Reply(ctx context.Context, history []*chat.Message, userMessage string) (chat.ReplyResult, error) {
+func (c *Client) Reply(ctx context.Context, history []*chat.Message, userMessage string, lang string) (chat.ReplyResult, error) {
 	contents := make([]geminiContent, 0, len(history)+1)
 	for _, m := range history {
 		contents = append(contents, geminiContent{
@@ -162,9 +167,13 @@ func (c *Client) Reply(ctx context.Context, history []*chat.Message, userMessage
 		Parts: []geminiPart{{Text: userMessage}},
 	})
 
+	systemPrompt := chatSystemPrompt
+	if lang == "bn" {
+		systemPrompt += " You MUST answer the user in Bengali (বাংলা). All advice, plant care tips, and explanations must be written in natural, fluent Bengali."
+	}
 	text, err := c.do(ctx, geminiRequest{
 		Contents:          contents,
-		SystemInstruction: &geminiSystemInstruction{Parts: []geminiPart{{Text: chatSystemPrompt}}},
+		SystemInstruction: &geminiSystemInstruction{Parts: []geminiPart{{Text: systemPrompt}}},
 	})
 	if err != nil {
 		return chat.ReplyResult{}, err
@@ -173,8 +182,10 @@ func (c *Client) Reply(ctx context.Context, history []*chat.Message, userMessage
 }
 
 type diagnosisJSON struct {
-	Issue string `json:"issue"`
-	Cure  string `json:"cure"`
+	Issue   string `json:"issue"`
+	Cure    string `json:"cure"`
+	IssueBn string `json:"issueBn,omitempty"`
+	CureBn  string `json:"cureBn,omitempty"`
 }
 
 // Analyze implements diagnosis.Provider.
@@ -208,5 +219,11 @@ func (c *Client) Analyze(ctx context.Context, imageData []byte) (diagnosis.Analy
 		return diagnosis.AnalysisResult{}, fmt.Errorf("gemini: parse diagnosis JSON %q: %w", raw, err)
 	}
 
-	return diagnosis.AnalysisResult{Issue: dj.Issue, Cure: dj.Cure, Provider: aiprovider.Gemini}, nil
+	return diagnosis.AnalysisResult{
+		Issue:    dj.Issue,
+		Cure:     dj.Cure,
+		IssueBn:  dj.IssueBn,
+		CureBn:   dj.CureBn,
+		Provider: aiprovider.Gemini,
+	}, nil
 }

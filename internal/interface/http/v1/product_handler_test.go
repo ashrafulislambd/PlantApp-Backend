@@ -106,3 +106,29 @@ func TestProductGet(t *testing.T) {
 		t.Errorf("missing product status = %d, want 404", rec.Code)
 	}
 }
+
+func TestProductListBengaliCategories(t *testing.T) {
+	mux := newProductMux()
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/products", nil)
+	req.Header.Set("Accept-Language", "bn")
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
+	}
+	var env listEnvelope
+	if err := json.Unmarshal(rec.Body.Bytes(), &env); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	found := false
+	for _, cat := range env.Data.Categories {
+		if cat.ID == "seeds" && cat.Name == "বীজ" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected seeds category to be localized to 'বীজ', got categories: %+v", env.Data.Categories)
+	}
+}

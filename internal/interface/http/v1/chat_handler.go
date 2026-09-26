@@ -7,6 +7,7 @@ import (
 
 	"myplantpal-backend/internal/domain/apperr"
 	"myplantpal-backend/internal/interface/http/authmw"
+	"myplantpal-backend/internal/interface/http/reqlocale"
 	"myplantpal-backend/internal/interface/http/respond"
 	chatuc "myplantpal-backend/internal/usecase/chat"
 )
@@ -37,6 +38,7 @@ func (h *ChatHandler) Send(w http.ResponseWriter, r *http.Request) {
 		UserID:    userID,
 		SessionID: req.SessionID,
 		Content:   req.Content,
+		Lang:      reqlocale.Resolve(r),
 	})
 	if err != nil {
 		respond.Error(w, err)

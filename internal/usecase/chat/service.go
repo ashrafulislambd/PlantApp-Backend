@@ -27,6 +27,7 @@ type SendInput struct {
 	UserID    string
 	SessionID string
 	Content   string
+	Lang      string
 }
 
 // Send stores the user's message, generates an assistant reply, stores
@@ -58,7 +59,7 @@ func (s *Service) Send(ctx context.Context, in SendInput) ([]*chat.Message, erro
 		return nil, err
 	}
 
-	result, err := s.provider.Reply(ctx, history, content)
+	result, err := s.provider.Reply(ctx, history, content, in.Lang)
 	if err != nil {
 		return nil, err
 	}

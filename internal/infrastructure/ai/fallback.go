@@ -32,11 +32,11 @@ func NewFallbackChatProvider(entries ...ChatProviderEntry) *FallbackChatProvider
 	return &FallbackChatProvider{entries: entries}
 }
 
-func (f *FallbackChatProvider) Reply(ctx context.Context, history []*chat.Message, userMessage string) (chat.ReplyResult, error) {
+func (f *FallbackChatProvider) Reply(ctx context.Context, history []*chat.Message, userMessage string, lang string) (chat.ReplyResult, error) {
 	var lastErr error
 	for _, e := range f.entries {
 		attemptCtx, cancel := context.WithTimeout(ctx, providerTimeout)
-		result, err := e.Provider.Reply(attemptCtx, history, userMessage)
+		result, err := e.Provider.Reply(attemptCtx, history, userMessage, lang)
 		cancel()
 		if err == nil {
 			return result, nil

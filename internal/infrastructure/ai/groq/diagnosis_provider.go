@@ -19,7 +19,12 @@ const defaultVisionModel = "qwen/qwen3.8-27b"
 const diagnosisPrompt = `You are a plant pathologist. Look at this photo of a plant and identify ` +
 	`the single most likely issue (disease, pest, or nutrient deficiency) and a practical cure.
 Reply ONLY as valid JSON with exactly these keys:
-{"issue": "<short description of the problem>", "cure": "<short, actionable treatment>"}
+{
+  "issue": "<short description of the problem in English>",
+  "cure": "<short, actionable treatment in English>",
+  "issueBn": "<short description of the problem translated into natural Bengali/বাংলা>",
+  "cureBn": "<short, actionable treatment translated into natural Bengali/বাংলা>"
+}
 Do not add any text outside the JSON object.`
 
 // DiagnosisProvider implements diagnosis.Provider using Groq's
@@ -77,8 +82,10 @@ type visionResponse struct {
 }
 
 type diagnosisJSON struct {
-	Issue string `json:"issue"`
-	Cure  string `json:"cure"`
+	Issue   string `json:"issue"`
+	Cure    string `json:"cure"`
+	IssueBn string `json:"issueBn,omitempty"`
+	CureBn  string `json:"cureBn,omitempty"`
 }
 
 // Analyze implements diagnosis.Provider. Groq accepts base64 images inline
@@ -141,5 +148,11 @@ func (p *DiagnosisProvider) Analyze(ctx context.Context, imageData []byte) (diag
 		return diagnosis.AnalysisResult{}, fmt.Errorf("groq: parse diagnosis JSON %q: %w", raw, err)
 	}
 
-	return diagnosis.AnalysisResult{Issue: dj.Issue, Cure: dj.Cure, Provider: aiprovider.Groq}, nil
+	return diagnosis.AnalysisResult{
+		Issue:    dj.Issue,
+		Cure:     dj.Cure,
+		IssueBn:  dj.IssueBn,
+		CureBn:   dj.CureBn,
+		Provider: aiprovider.Groq,
+	}, nil
 }

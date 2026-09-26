@@ -6,6 +6,8 @@ import (
 	"net/http"
 
 	"myplantpal-backend/internal/domain/apperr"
+	"myplantpal-backend/internal/domain/fertilizer"
+	"myplantpal-backend/internal/interface/http/reqlocale"
 	"myplantpal-backend/internal/interface/http/respond"
 	fertilizeruc "myplantpal-backend/internal/usecase/fertilizer"
 )
@@ -41,7 +43,7 @@ func (h *FertilizerHandler) Create(w http.ResponseWriter, r *http.Request) {
 		respond.Error(w, err)
 		return
 	}
-	respond.JSON(w, http.StatusCreated, f)
+	respond.JSON(w, http.StatusCreated, f.Localized(reqlocale.Resolve(r)))
 }
 
 // List handles the "Find your homemade fertilizer" search bar via ?q=.
@@ -51,7 +53,12 @@ func (h *FertilizerHandler) List(w http.ResponseWriter, r *http.Request) {
 		respond.Error(w, err)
 		return
 	}
-	respond.JSON(w, http.StatusOK, items)
+	lang := reqlocale.Resolve(r)
+	localized := make([]fertilizer.Fertilizer, len(items))
+	for i, item := range items {
+		localized[i] = item.Localized(lang)
+	}
+	respond.JSON(w, http.StatusOK, localized)
 }
 
 func (h *FertilizerHandler) Get(w http.ResponseWriter, r *http.Request) {
@@ -60,5 +67,5 @@ func (h *FertilizerHandler) Get(w http.ResponseWriter, r *http.Request) {
 		respond.Error(w, err)
 		return
 	}
-	respond.JSON(w, http.StatusOK, f)
+	respond.JSON(w, http.StatusOK, f.Localized(reqlocale.Resolve(r)))
 }

@@ -61,9 +61,13 @@ type chatCompletionResponse struct {
 
 // Reply implements chat.ReplyProvider. Domain roles ("user"/"assistant")
 // match Groq's OpenAI-compatible roles directly — no remapping needed.
-func (p *ChatProvider) Reply(ctx context.Context, history []*chat.Message, userMessage string) (chat.ReplyResult, error) {
+func (p *ChatProvider) Reply(ctx context.Context, history []*chat.Message, userMessage string, lang string) (chat.ReplyResult, error) {
+	systemPrompt := chatSystemPrompt
+	if lang == "bn" {
+		systemPrompt += " You MUST answer the user in Bengali (বাংলা). All advice, plant care tips, and explanations must be written in natural, fluent Bengali."
+	}
 	messages := make([]chatCompletionMessage, 0, len(history)+2)
-	messages = append(messages, chatCompletionMessage{Role: "system", Content: chatSystemPrompt})
+	messages = append(messages, chatCompletionMessage{Role: "system", Content: systemPrompt})
 	for _, m := range history {
 		messages = append(messages, chatCompletionMessage{Role: string(m.Role), Content: m.Content})
 	}

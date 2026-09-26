@@ -7,6 +7,7 @@ import (
 
 	"myplantpal-backend/internal/domain/apperr"
 	"myplantpal-backend/internal/interface/http/authmw"
+	"myplantpal-backend/internal/interface/http/reqlocale"
 	"myplantpal-backend/internal/interface/http/respond"
 	plantuc "myplantpal-backend/internal/usecase/plant"
 )
@@ -39,6 +40,7 @@ func (h *PlantHandler) Create(w http.ResponseWriter, r *http.Request) {
 		Name:     req.Name,
 		Type:     req.Type,
 		AgeStage: req.AgeStage,
+		Lang:     reqlocale.Resolve(r),
 	})
 	if err != nil {
 		respond.Error(w, err)

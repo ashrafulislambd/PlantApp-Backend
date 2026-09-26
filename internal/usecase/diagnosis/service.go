@@ -42,14 +42,17 @@ func (s *Service) Analyze(ctx context.Context, in AnalyzeInput) (*diagnosis.Diag
 	}
 
 	d := &diagnosis.Diagnosis{
-		ID:         s.ids.New("diag"),
-		UserID:     in.UserID,
-		PlantID:    in.PlantID,
-		Issue:      result.Issue,
-		Cure:       result.Cure,
-		Disclaimer: diagnosis.Disclaimer,
-		CreatedAt:  time.Now().UTC(),
-		Provider:   string(result.Provider),
+		ID:           s.ids.New("diag"),
+		UserID:       in.UserID,
+		PlantID:      in.PlantID,
+		Issue:        result.Issue,
+		Cure:         result.Cure,
+		Disclaimer:   diagnosis.Disclaimer,
+		IssueBn:      result.IssueBn,
+		CureBn:       result.CureBn,
+		DisclaimerBn: diagnosis.DisclaimerBn,
+		CreatedAt:    time.Now().UTC(),
+		Provider:     string(result.Provider),
 	}
 	if err := s.repo.Create(ctx, d); err != nil {
 		return nil, err

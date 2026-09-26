@@ -17,7 +17,7 @@ func NewMockChatReplyProvider() *MockChatReplyProvider {
 	return &MockChatReplyProvider{}
 }
 
-func (p *MockChatReplyProvider) Reply(_ context.Context, _ []*chat.Message, userMessage string) (chat.ReplyResult, error) {
+func (p *MockChatReplyProvider) Reply(_ context.Context, _ []*chat.Message, userMessage string, lang string) (chat.ReplyResult, error) {
 	return chat.ReplyResult{
 		Text: fmt.Sprintf(
 			"Thanks for asking about %q. An expert reply isn't wired up yet — check the Fertilizer or AI Doctor screens for guidance in the meantime.",
