@@ -50,23 +50,33 @@ func main() {
 
 	userRepo := mongorepo.NewUserRepository(db)
 	refreshRepo := mongorepo.NewRefreshTokenRepository(db)
+	plantRepo := mongorepo.NewPlantRepository(db)
+	diagnosisRepo := mongorepo.NewDiagnosisRepository(db)
+	chatRepo := mongorepo.NewChatRepository(db)
 	if err := userRepo.EnsureIndexes(mongoCtx); err != nil {
 		log.Fatalf("user indexes: %v", err)
 	}
 	if err := refreshRepo.EnsureIndexes(mongoCtx); err != nil {
 		log.Fatalf("refresh token indexes: %v", err)
 	}
+	if err := plantRepo.EnsureIndexes(mongoCtx); err != nil {
+		log.Fatalf("plant indexes: %v", err)
+	}
+	if err := diagnosisRepo.EnsureIndexes(mongoCtx); err != nil {
+		log.Fatalf("diagnosis indexes: %v", err)
+	}
+	if err := chatRepo.EnsureIndexes(mongoCtx); err != nil {
+		log.Fatalf("chat indexes: %v", err)
+	}
 
 	jwtIssuer := security.NewJWTIssuer(cfg.JWTSecret, "myplantpal-backend", cfg.JWTAccessTTL)
 	authService := authuc.NewService(userRepo, refreshRepo, ids, jwtIssuer, cfg.JWTRefreshTTL)
 
-	// In-memory repositories for now; swap each for a MongoDB-backed
-	// implementation later without touching usecases or handlers.
-	plantRepo     := memory.NewPlantRepository()
+	// Plants, diagnoses, and chat history are now MongoDB-backed (per-user
+	// data that must survive a restart). Fertilizers and products are still
+	// in-memory: they're global, seed-loaded catalog data, not user data.
 	fertilizerRepo := memory.NewFertilizerRepository(seed.Fertilizers()...)
-	diagnosisRepo  := memory.NewDiagnosisRepository()
-	chatRepo       := memory.NewChatRepository()
-	productRepo    := memory.NewProductRepository(productseed.Products(), productseed.Categories())
+	productRepo := memory.NewProductRepository(productseed.Products(), productseed.Categories())
 
 	// Groq Compound price refresher — only enabled when GROQ_API_KEY is set.
 	var priceRefresher productuc.PriceRefresherPort

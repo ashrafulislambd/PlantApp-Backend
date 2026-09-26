@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"myplantpal-backend/internal/domain/apperr"
+	"myplantpal-backend/internal/interface/http/authmw"
 	"myplantpal-backend/internal/interface/http/respond"
 	diagnosisuc "myplantpal-backend/internal/usecase/diagnosis"
 )
@@ -42,7 +43,9 @@ func (h *DiagnosisHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	userID, _ := authmw.UserID(r.Context())
 	d, err := h.svc.Analyze(r.Context(), diagnosisuc.AnalyzeInput{
+		UserID:    userID,
 		PlantID:   req.PlantID,
 		ImageData: imageData,
 	})
@@ -59,7 +62,8 @@ func (h *DiagnosisHandler) List(w http.ResponseWriter, r *http.Request) {
 	if q := r.URL.Query().Get("plantId"); q != "" {
 		plantID = &q
 	}
-	items, err := h.svc.List(r.Context(), plantID)
+	userID, _ := authmw.UserID(r.Context())
+	items, err := h.svc.List(r.Context(), userID, plantID)
 	if err != nil {
 		respond.Error(w, err)
 		return
@@ -68,7 +72,8 @@ func (h *DiagnosisHandler) List(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *DiagnosisHandler) Get(w http.ResponseWriter, r *http.Request) {
-	d, err := h.svc.Get(r.Context(), r.PathValue("id"))
+	userID, _ := authmw.UserID(r.Context())
+	d, err := h.svc.Get(r.Context(), r.PathValue("id"), userID)
 	if err != nil {
 		respond.Error(w, err)
 		return

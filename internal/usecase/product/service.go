@@ -1,9 +1,11 @@
-﻿// Package product implements the application logic for the product catalog
+// Package product implements the application logic for the product catalog
 // and AI-powered price refresh.
 package product
 
 import (
 	"fmt"
+	"strings"
+
 	"myplantpal-backend/internal/domain/apperr"
 	"myplantpal-backend/internal/domain/product"
 )
@@ -23,7 +25,15 @@ func NewService(repo product.Repository, refresher product.PriceRefresher) *Serv
 	return &Service{repo: repo, refresher: refresher}
 }
 
+// List returns the catalog, optionally filtered by category ID. The ID is
+// trimmed and lower-cased (category IDs are lower-case kebab-case). An empty
+// ID or "all" returns every product. An unknown ID yields an empty list, not
+// an error, so clients can render an empty state.
 func (s *Service) List(categoryID string) ([]*product.Product, error) {
+	categoryID = strings.ToLower(strings.TrimSpace(categoryID))
+	if categoryID == "all" {
+		categoryID = ""
+	}
 	return s.repo.List(categoryID)
 }
 

@@ -30,31 +30,35 @@ func (r *PlantRepository) Create(_ context.Context, p *plant.Plant) error {
 	return nil
 }
 
-func (r *PlantRepository) GetByID(_ context.Context, id string) (*plant.Plant, error) {
+func (r *PlantRepository) GetByID(_ context.Context, id, userID string) (*plant.Plant, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	p, ok := r.items[id]
-	if !ok {
+	if !ok || p.UserID != userID {
 		return nil, apperr.ErrNotFound
 	}
 	return p, nil
 }
 
-func (r *PlantRepository) List(_ context.Context) ([]*plant.Plant, error) {
+func (r *PlantRepository) List(_ context.Context, userID string) ([]*plant.Plant, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	out := make([]*plant.Plant, 0, len(r.items))
 	for _, p := range r.items {
+		if p.UserID != userID {
+			continue
+		}
 		out = append(out, p)
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].CreatedAt.Before(out[j].CreatedAt) })
 	return out, nil
 }
 
-func (r *PlantRepository) Delete(_ context.Context, id string) error {
+func (r *PlantRepository) Delete(_ context.Context, id, userID string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if _, ok := r.items[id]; !ok {
+	p, ok := r.items[id]
+	if !ok || p.UserID != userID {
 		return apperr.ErrNotFound
 	}
 	delete(r.items, id)

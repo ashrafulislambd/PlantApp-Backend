@@ -1,4 +1,4 @@
-﻿package v1
+package v1
 
 import (
 	"net/http"
@@ -15,15 +15,25 @@ func NewProductHandler(svc *productuc.Service) *ProductHandler {
 	return &ProductHandler{svc: svc}
 }
 
-// List handles GET /api/v1/products[?category=plants]
+// List handles GET /api/v1/products[?categoryId=plants]
+// The legacy ?category= parameter is still accepted; categoryId wins if both
+// are present. The response always carries both categories and products.
 func (h *ProductHandler) List(w http.ResponseWriter, r *http.Request) {
-	cat := r.URL.Query().Get("category")
+	q := r.URL.Query()
+	cat := q.Get("categoryId")
+	if cat == "" {
+		cat = q.Get("category")
+	}
 	items, err := h.svc.List(cat)
 	if err != nil {
 		respond.Error(w, err)
 		return
 	}
-	cats, _ := h.svc.ListCategories()
+	cats, err := h.svc.ListCategories()
+	if err != nil {
+		respond.Error(w, err)
+		return
+	}
 	respond.JSON(w, http.StatusOK, map[string]any{
 		"categories": cats,
 		"products":   items,

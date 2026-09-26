@@ -24,6 +24,7 @@ func NewService(repo chat.Repository, provider chat.ReplyProvider, ids idgen.Gen
 }
 
 type SendInput struct {
+	UserID    string
 	SessionID string
 	Content   string
 }
@@ -36,14 +37,18 @@ func (s *Service) Send(ctx context.Context, in SendInput) ([]*chat.Message, erro
 	if sessionID == "" || content == "" {
 		return nil, fmt.Errorf("%w: sessionId and content are required", apperr.ErrInvalidInput)
 	}
+	if in.UserID == "" {
+		return nil, fmt.Errorf("%w: userID is required", apperr.ErrInvalidInput)
+	}
 
-	history, err := s.repo.ListBySession(ctx, sessionID)
+	history, err := s.repo.ListBySession(ctx, in.UserID, sessionID)
 	if err != nil {
 		return nil, err
 	}
 
 	userMsg := &chat.Message{
 		ID:        s.ids.New("msg"),
+		UserID:    in.UserID,
 		SessionID: sessionID,
 		Role:      chat.RoleUser,
 		Content:   content,
@@ -60,6 +65,7 @@ func (s *Service) Send(ctx context.Context, in SendInput) ([]*chat.Message, erro
 
 	assistantMsg := &chat.Message{
 		ID:        s.ids.New("msg"),
+		UserID:    in.UserID,
 		SessionID: sessionID,
 		Role:      chat.RoleAssistant,
 		Content:   result.Text,
@@ -73,6 +79,6 @@ func (s *Service) Send(ctx context.Context, in SendInput) ([]*chat.Message, erro
 	return []*chat.Message{userMsg, assistantMsg}, nil
 }
 
-func (s *Service) List(ctx context.Context, sessionID string) ([]*chat.Message, error) {
-	return s.repo.ListBySession(ctx, sessionID)
+func (s *Service) List(ctx context.Context, userID, sessionID string) ([]*chat.Message, error) {
+	return s.repo.ListBySession(ctx, userID, sessionID)
 }

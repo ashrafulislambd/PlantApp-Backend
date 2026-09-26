@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"myplantpal-backend/internal/domain/apperr"
+	"myplantpal-backend/internal/interface/http/authmw"
 	"myplantpal-backend/internal/interface/http/respond"
 	plantuc "myplantpal-backend/internal/usecase/plant"
 )
@@ -32,7 +33,9 @@ func (h *PlantHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	userID, _ := authmw.UserID(r.Context())
 	p, err := h.svc.Create(r.Context(), plantuc.CreateInput{
+		UserID:   userID,
 		Name:     req.Name,
 		Type:     req.Type,
 		AgeStage: req.AgeStage,
@@ -45,7 +48,8 @@ func (h *PlantHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *PlantHandler) List(w http.ResponseWriter, r *http.Request) {
-	items, err := h.svc.List(r.Context())
+	userID, _ := authmw.UserID(r.Context())
+	items, err := h.svc.List(r.Context(), userID)
 	if err != nil {
 		respond.Error(w, err)
 		return
@@ -54,7 +58,8 @@ func (h *PlantHandler) List(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *PlantHandler) Get(w http.ResponseWriter, r *http.Request) {
-	p, err := h.svc.Get(r.Context(), r.PathValue("id"))
+	userID, _ := authmw.UserID(r.Context())
+	p, err := h.svc.Get(r.Context(), r.PathValue("id"), userID)
 	if err != nil {
 		respond.Error(w, err)
 		return
@@ -63,7 +68,8 @@ func (h *PlantHandler) Get(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *PlantHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	if err := h.svc.Delete(r.Context(), r.PathValue("id")); err != nil {
+	userID, _ := authmw.UserID(r.Context())
+	if err := h.svc.Delete(r.Context(), r.PathValue("id"), userID); err != nil {
 		respond.Error(w, err)
 		return
 	}

@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"myplantpal-backend/internal/domain/apperr"
+	"myplantpal-backend/internal/interface/http/authmw"
 	"myplantpal-backend/internal/interface/http/respond"
 	chatuc "myplantpal-backend/internal/usecase/chat"
 )
@@ -31,7 +32,9 @@ func (h *ChatHandler) Send(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	userID, _ := authmw.UserID(r.Context())
 	msgs, err := h.svc.Send(r.Context(), chatuc.SendInput{
+		UserID:    userID,
 		SessionID: req.SessionID,
 		Content:   req.Content,
 	})
@@ -49,7 +52,8 @@ func (h *ChatHandler) List(w http.ResponseWriter, r *http.Request) {
 		respond.Error(w, fmt.Errorf("%w: sessionId query param is required", apperr.ErrInvalidInput))
 		return
 	}
-	items, err := h.svc.List(r.Context(), sessionID)
+	userID, _ := authmw.UserID(r.Context())
+	items, err := h.svc.List(r.Context(), userID, sessionID)
 	if err != nil {
 		respond.Error(w, err)
 		return

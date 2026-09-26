@@ -23,6 +23,7 @@ func NewService(repo plant.Repository, ids idgen.Generator) *Service {
 }
 
 type CreateInput struct {
+	UserID   string
 	Name     string
 	Type     string
 	AgeStage string
@@ -33,10 +34,14 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (*plant.Plant, err
 	if name == "" {
 		return nil, fmt.Errorf("%w: name is required", apperr.ErrInvalidInput)
 	}
+	if strings.TrimSpace(in.UserID) == "" {
+		return nil, fmt.Errorf("%w: userID is required", apperr.ErrInvalidInput)
+	}
 
 	now := time.Now().UTC()
 	p := &plant.Plant{
 		ID:          s.ids.New("pl"),
+		UserID:      in.UserID,
 		Name:        name,
 		Type:        strings.TrimSpace(in.Type),
 		AgeStage:    strings.TrimSpace(in.AgeStage),
@@ -50,16 +55,16 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (*plant.Plant, err
 	return p, nil
 }
 
-func (s *Service) Get(ctx context.Context, id string) (*plant.Plant, error) {
-	return s.repo.GetByID(ctx, id)
+func (s *Service) Get(ctx context.Context, id, userID string) (*plant.Plant, error) {
+	return s.repo.GetByID(ctx, id, userID)
 }
 
-func (s *Service) List(ctx context.Context) ([]*plant.Plant, error) {
-	return s.repo.List(ctx)
+func (s *Service) List(ctx context.Context, userID string) ([]*plant.Plant, error) {
+	return s.repo.List(ctx, userID)
 }
 
-func (s *Service) Delete(ctx context.Context, id string) error {
-	return s.repo.Delete(ctx, id)
+func (s *Service) Delete(ctx context.Context, id, userID string) error {
+	return s.repo.Delete(ctx, id, userID)
 }
 
 // buildRoadmap derives a watering schedule, tips, and a fertilizer
