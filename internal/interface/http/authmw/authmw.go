@@ -44,3 +44,8 @@ func UserID(ctx context.Context) (string, bool) {
 	id, ok := ctx.Value(userIDKey).(string)
 	return id, ok
 }
+
+// WithUserID returns a context copy with the user ID set (useful for tests and internal requests).
+func WithUserID(ctx context.Context, userID string) context.Context {
+	return context.WithValue(ctx, userIDKey, userID)
+}

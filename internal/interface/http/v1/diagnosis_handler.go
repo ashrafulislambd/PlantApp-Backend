@@ -27,11 +27,6 @@ type createDiagnosisRequest struct {
 	ImageBase64 string  `json:"imageBase64"`
 }
 
-// Create handles "Upload your Plant's Photo" / "Open Camera to take photo"
-// on the Diseases Detection screen. The image is sent as base64 JSON
-// rather than multipart to keep the client-side wiring simple; this is an
-// implementation detail the eventual Cloudinary-backed version can change
-// freely since it's isolated behind this handler.
 func (h *DiagnosisHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var req createDiagnosisRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -58,7 +53,6 @@ func (h *DiagnosisHandler) Create(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, http.StatusCreated, d.Localized(reqlocale.Resolve(r)))
 }
 
-// List handles the "Add to Log" history, optionally filtered by ?plantId=.
 func (h *DiagnosisHandler) List(w http.ResponseWriter, r *http.Request) {
 	var plantID *string
 	if q := r.URL.Query().Get("plantId"); q != "" {

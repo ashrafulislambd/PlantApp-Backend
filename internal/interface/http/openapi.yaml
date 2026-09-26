@@ -5,6 +5,14 @@ info:
     API for the MyPlantPal app: plant care roadmaps, AI Doctor diagnosis,
     homemade fertilizer recipes, and the AI chat assistant. Repositories are
     currently in-memory and reset on restart.
+
+
+    Localization: send an `Accept-Language: bn` header to receive Bengali
+    text for fertilizer recipes, diagnosis results, and plant care
+    tips/fertilizer recommendations, where a translation exists. Any other
+    value (or no header) returns English. This only affects
+    server-generated/seeded text, not user-submitted content (e.g. a
+    fertilizer a user adds themselves).
   version: "1.0.0"
 servers:
   - url: /

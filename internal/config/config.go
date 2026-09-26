@@ -1,4 +1,3 @@
-// Package config loads runtime configuration from the environment.
 package config
 
 import (
@@ -11,16 +10,21 @@ import (
 type Config struct {
 	Port string
 
+	// GeminiAPIKey is the primary AI Doctor / AI Chat provider.
 	GeminiAPIKey string
 	GeminiModel  string
 
+	// GroqAPIKey enables AI Doctor / AI Chat replies via Groq (fallback)
+	// and powers the shop price-refresh feature.
 	GroqAPIKey      string
 	GroqChatModel   string
 	GroqVisionModel string
 
+	// MongoDB
 	MongoURI    string
 	MongoDBName string
 
+	// Auth (JWT)
 	JWTSecret     string
 	JWTAccessTTL  time.Duration
 	JWTRefreshTTL time.Duration
@@ -30,6 +34,11 @@ func Load() Config {
 	// Load local development settings without overriding explicitly exported variables.
 	_ = godotenv.Load()
 
+	chatModel := os.Getenv("GROQ_CHAT_MODEL")
+	if chatModel == "" {
+		chatModel = getenv("GROQ_MODEL", "openai/gpt-oss-120b")
+	}
+
 	return Config{
 		Port: getenv("PORT", "8081"),
 
@@ -37,7 +46,7 @@ func Load() Config {
 		GeminiModel:  getenv("GEMINI_MODEL", "gemini-3.6-flash"),
 
 		GroqAPIKey:      os.Getenv("GROQ_API_KEY"),
-		GroqChatModel:   getenv("GROQ_MODEL", "openai/gpt-oss-120b"),
+		GroqChatModel:   chatModel,
 		GroqVisionModel: getenv("GROQ_VISION_MODEL", "qwen/qwen3.8-27b"),
 
 		MongoURI:    getenv("MONGO_URI", "mongodb://localhost:27017"),

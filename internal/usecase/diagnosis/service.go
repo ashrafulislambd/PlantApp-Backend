@@ -1,5 +1,3 @@
-// Package diagnosis implements the application logic behind the AI Doctor
-// / Diseases Detection screen: submit a photo, get an issue and cure back.
 package diagnosis
 
 import (

@@ -1,7 +1,3 @@
-// Package ai holds mock implementations of the domain AI provider
-// interfaces (diagnosis.Provider, chat.ReplyProvider). Swap these for
-// Gemini/Groq-backed implementations later — the usecase layer only
-// depends on the interfaces, not on this package.
 package ai
 
 import (
@@ -36,8 +32,6 @@ var mockDiagnoses = []diagnosis.AnalysisResult{
 	},
 }
 
-// MockDiagnosisProvider cycles through a small set of canned results so
-// the API is exercisable end to end without a real AI integration.
 type MockDiagnosisProvider struct {
 	counter atomic.Uint64
 }

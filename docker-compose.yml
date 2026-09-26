@@ -12,8 +12,8 @@ services:
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
-      GROQ_MODEL: ${GROQ_MODEL:-}
-      GROQ_VISION_MODEL: ${GROQ_VISION_MODEL:-}
+      GROQ_CHAT_MODEL: ${GROQ_CHAT_MODEL:-${GROQ_MODEL:-openai/gpt-oss-120b}}
+      GROQ_VISION_MODEL: ${GROQ_VISION_MODEL:-qwen/qwen3.8-27b}
       MONGO_URI: ${MONGO_URI:-mongodb://mongo:27017}
       MONGO_DB_NAME: ${MONGO_DB_NAME:-myplantpal}
       JWT_SECRET: ${JWT_SECRET:-}
@@ -27,22 +27,20 @@ services:
       interval: 10s
       timeout: 3s
       retries: 3
-      start_period: 5s
     restart: unless-stopped
 
   mongo:
-    image: mongo:7
+    image: mongo:7-jammy
     ports:
       - "27017:27017"
     volumes:
-      - mongo_data:/data/db
+      - mongo-data:/data/db
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 5s
+      interval: 5s
+      timeout: 3s
       retries: 5
-      start_period: 10s
     restart: unless-stopped
 
 volumes:
-  mongo_data:
+  mongo-data:

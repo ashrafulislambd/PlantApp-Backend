@@ -26,7 +26,6 @@ type createPlantRequest struct {
 	AgeStage string `json:"ageStage"`
 }
 
-// Create handles "Create My Roadmap" on the Maintainance screen.
 func (h *PlantHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var req createPlantRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

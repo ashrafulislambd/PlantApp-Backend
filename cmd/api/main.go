@@ -1,13 +1,11 @@
-﻿// Command api runs the MyPlantPal HTTP API.
 package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	"myplantpal-backend/internal/config"
@@ -19,8 +17,8 @@ import (
 	"myplantpal-backend/internal/infrastructure/ai/groq"
 	"myplantpal-backend/internal/infrastructure/repository/memory"
 	"myplantpal-backend/internal/infrastructure/repository/memory/seed"
-	mongorepo "myplantpal-backend/internal/infrastructure/repository/mongo"
 	productseed "myplantpal-backend/internal/infrastructure/repository/memory/seed/products"
+	mongorepo "myplantpal-backend/internal/infrastructure/repository/mongo"
 	"myplantpal-backend/internal/infrastructure/security"
 	httpapi "myplantpal-backend/internal/interface/http"
 	"myplantpal-backend/internal/interface/http/authmw"
@@ -72,13 +70,9 @@ func main() {
 	jwtIssuer := security.NewJWTIssuer(cfg.JWTSecret, "myplantpal-backend", cfg.JWTAccessTTL)
 	authService := authuc.NewService(userRepo, refreshRepo, ids, jwtIssuer, cfg.JWTRefreshTTL)
 
-	// Plants, diagnoses, and chat history are now MongoDB-backed (per-user
-	// data that must survive a restart). Fertilizers and products are still
-	// in-memory: they're global, seed-loaded catalog data, not user data.
 	fertilizerRepo := memory.NewFertilizerRepository(seed.Fertilizers()...)
 	productRepo := memory.NewProductRepository(productseed.Products(), productseed.Categories())
 
-	// Groq Compound price refresher — only enabled when GROQ_API_KEY is set.
 	var priceRefresher productuc.PriceRefresherPort
 	if key := os.Getenv("GROQ_API_KEY"); key != "" {
 		priceRefresher = groq.New(key)
@@ -87,9 +81,6 @@ func main() {
 		log.Println("Groq price refresh: disabled (set GROQ_API_KEY to enable)")
 	}
 
-	// AI Chat Box / AI Doctor providers: Gemini (primary), Groq (fallback),
-	// mock (last resort). Only providers whose API key is configured join
-	// the chain; mock is always last so the chain can never fail outright.
 	var chatEntries []ai.ChatProviderEntry
 	var diagnosisEntries []ai.DiagnosisProviderEntry
 	if cfg.GeminiAPIKey != "" {
@@ -127,26 +118,15 @@ func main() {
 	}
 
 	srv := &http.Server{
-		Addr:              ":" + cfg.Port,
-		Handler:           httpapi.NewRouter(deps),
-		ReadHeaderTimeout: 5 * time.Second,
+		Addr:         ":" + cfg.Port,
+		Handler:      httpapi.NewRouter(deps),
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 60 * time.Second,
+		IdleTimeout:  60 * time.Second,
 	}
 
-	go func() {
-		log.Printf("myplantpal backend listening on :%s", cfg.Port)
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("server error: %v", err)
-		}
-	}()
-
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
-	<-quit
-
-	log.Println("shutting down...")
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatalf("graceful shutdown failed: %v", err)
+	fmt.Printf("PlantPal API listening on :%s\n", cfg.Port)
+	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Fatalf("server stopped: %v", err)
 	}
 }

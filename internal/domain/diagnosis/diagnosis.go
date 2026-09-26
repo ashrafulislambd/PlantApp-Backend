@@ -1,6 +1,3 @@
-// Package diagnosis holds the AI Doctor domain: a photo of a plant is
-// analyzed and returns an issue and a suggested cure, modeling the
-// "Diseases Detection" screen.
 package diagnosis
 
 import "time"

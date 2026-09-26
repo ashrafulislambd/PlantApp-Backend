@@ -1,5 +1,3 @@
-// Package seed provides initial in-memory data so the API is useful
-// out of the box, without a real database behind it yet.
 package seed
 
 import (
@@ -8,8 +6,6 @@ import (
 	"myplantpal-backend/internal/domain/fertilizer"
 )
 
-// Fertilizers returns the starter recipes shown in the Figma design plus a
-// couple of siblings covering the other two primary nutrients.
 func Fertilizers() []*fertilizer.Fertilizer {
 	now := time.Now().UTC()
 	return []*fertilizer.Fertilizer{
