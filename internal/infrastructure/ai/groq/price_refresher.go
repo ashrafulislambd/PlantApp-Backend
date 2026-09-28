@@ -1,4 +1,4 @@
-﻿// Package groq implements the PriceRefresher port using Groq Compound,
+// Package groq implements the PriceRefresher port using Groq Compound,
 // a model with built-in web-search capability. The key never leaves the
 // backend — the Flutter app only calls POST /api/v1/products/{id}/refresh.
 package groq
@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"myplantpal-backend/internal/domain/product"
+	"plantpal-backend/internal/domain/product"
 )
 
 const (

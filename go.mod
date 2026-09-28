@@ -1,4 +1,4 @@
-module myplantpal-backend
+module plantpal-backend
 
 go 1.26.0
 

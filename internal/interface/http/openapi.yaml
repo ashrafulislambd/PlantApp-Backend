@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
-  title: MyPlantPal API
+  title: PlantPal API
   description: >
-    API for the MyPlantPal app: plant care roadmaps, AI Doctor diagnosis,
+    API for the PlantPal app: plant care roadmaps, AI Doctor diagnosis,
     homemade fertilizer recipes, and the AI chat assistant. Repositories are
     currently in-memory and reset on restart.
 

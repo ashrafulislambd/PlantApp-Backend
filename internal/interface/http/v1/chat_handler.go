@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"net/http"
 
-	"myplantpal-backend/internal/domain/apperr"
-	"myplantpal-backend/internal/interface/http/authmw"
-	"myplantpal-backend/internal/interface/http/reqlocale"
-	"myplantpal-backend/internal/interface/http/respond"
-	chatuc "myplantpal-backend/internal/usecase/chat"
+	"plantpal-backend/internal/domain/apperr"
+	"plantpal-backend/internal/interface/http/authmw"
+	"plantpal-backend/internal/interface/http/reqlocale"
+	"plantpal-backend/internal/interface/http/respond"
+	chatuc "plantpal-backend/internal/usecase/chat"
 )
 
 type ChatHandler struct {

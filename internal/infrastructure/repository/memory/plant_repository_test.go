@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"myplantpal-backend/internal/domain/apperr"
-	"myplantpal-backend/internal/domain/plant"
+	"plantpal-backend/internal/domain/apperr"
+	"plantpal-backend/internal/domain/plant"
 )
 
 func TestPlantRepository_CreateAndGet(t *testing.T) {

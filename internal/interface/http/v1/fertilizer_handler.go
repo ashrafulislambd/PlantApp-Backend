@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"net/http"
 
-	"myplantpal-backend/internal/domain/apperr"
-	"myplantpal-backend/internal/domain/fertilizer"
-	"myplantpal-backend/internal/interface/http/reqlocale"
-	"myplantpal-backend/internal/interface/http/respond"
-	fertilizeruc "myplantpal-backend/internal/usecase/fertilizer"
+	"plantpal-backend/internal/domain/apperr"
+	"plantpal-backend/internal/domain/fertilizer"
+	"plantpal-backend/internal/interface/http/reqlocale"
+	"plantpal-backend/internal/interface/http/respond"
+	fertilizeruc "plantpal-backend/internal/usecase/fertilizer"
 )
 
 type FertilizerHandler struct {

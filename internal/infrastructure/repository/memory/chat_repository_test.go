@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"myplantpal-backend/internal/domain/chat"
+	"plantpal-backend/internal/domain/chat"
 )
 
 func TestChatRepository_ListBySession_OrderedAndScopedToSession(t *testing.T) {

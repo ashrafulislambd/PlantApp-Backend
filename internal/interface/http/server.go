@@ -3,8 +3,8 @@ package httpapi
 import (
 	"net/http"
 
-	"myplantpal-backend/internal/interface/http/respond"
-	v1 "myplantpal-backend/internal/interface/http/v1"
+	"plantpal-backend/internal/interface/http/respond"
+	v1 "plantpal-backend/internal/interface/http/v1"
 )
 
 // NewRouter builds the full HTTP handler: unversioned root/health routes
@@ -28,7 +28,7 @@ func healthCheck(w http.ResponseWriter, r *http.Request) {
 
 func apiInfo(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, http.StatusOK, map[string]any{
-		"name":     "MyPlantPal API",
+		"name":     "PlantPal API",
 		"versions": []string{"v1"},
 		"docs":     "/docs",
 	})

@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"myplantpal-backend/internal/domain/aiprovider"
-	"myplantpal-backend/internal/domain/chat"
+	"plantpal-backend/internal/domain/aiprovider"
+	"plantpal-backend/internal/domain/chat"
 )
 
 // MockChatReplyProvider returns a canned acknowledgement referencing the

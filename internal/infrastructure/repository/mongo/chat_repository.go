@@ -8,8 +8,8 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
-	"myplantpal-backend/internal/domain/apperr"
-	"myplantpal-backend/internal/domain/chat"
+	"plantpal-backend/internal/domain/apperr"
+	"plantpal-backend/internal/domain/chat"
 )
 
 type ChatRepository struct {

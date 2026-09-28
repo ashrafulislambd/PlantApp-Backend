@@ -5,8 +5,8 @@ import (
 	"sort"
 	"sync"
 
-	"myplantpal-backend/internal/domain/apperr"
-	"myplantpal-backend/internal/domain/diagnosis"
+	"plantpal-backend/internal/domain/apperr"
+	"plantpal-backend/internal/domain/diagnosis"
 )
 
 type DiagnosisRepository struct {

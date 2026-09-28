@@ -8,27 +8,28 @@ import (
 	"os"
 	"time"
 
-	"myplantpal-backend/internal/config"
-	"myplantpal-backend/internal/domain/chat"
-	"myplantpal-backend/internal/domain/diagnosis"
-	"myplantpal-backend/internal/idgen"
-	"myplantpal-backend/internal/infrastructure/ai"
-	"myplantpal-backend/internal/infrastructure/ai/gemini"
-	"myplantpal-backend/internal/infrastructure/ai/groq"
-	"myplantpal-backend/internal/infrastructure/repository/memory"
-	"myplantpal-backend/internal/infrastructure/repository/memory/seed"
-	productseed "myplantpal-backend/internal/infrastructure/repository/memory/seed/products"
-	mongorepo "myplantpal-backend/internal/infrastructure/repository/mongo"
-	"myplantpal-backend/internal/infrastructure/security"
-	httpapi "myplantpal-backend/internal/interface/http"
-	"myplantpal-backend/internal/interface/http/authmw"
-	v1 "myplantpal-backend/internal/interface/http/v1"
-	authuc "myplantpal-backend/internal/usecase/auth"
-	chatuc "myplantpal-backend/internal/usecase/chat"
-	diagnosisuc "myplantpal-backend/internal/usecase/diagnosis"
-	fertilizeruc "myplantpal-backend/internal/usecase/fertilizer"
-	plantuc "myplantpal-backend/internal/usecase/plant"
-	productuc "myplantpal-backend/internal/usecase/product"
+	"plantpal-backend/internal/config"
+	"plantpal-backend/internal/domain/chat"
+	"plantpal-backend/internal/domain/diagnosis"
+	"plantpal-backend/internal/idgen"
+	"plantpal-backend/internal/infrastructure/ai"
+	"plantpal-backend/internal/infrastructure/ai/gemini"
+	"plantpal-backend/internal/infrastructure/ai/groq"
+	"plantpal-backend/internal/infrastructure/repository/memory"
+	"plantpal-backend/internal/infrastructure/repository/memory/seed"
+	productseed "plantpal-backend/internal/infrastructure/repository/memory/seed/products"
+	mongorepo "plantpal-backend/internal/infrastructure/repository/mongo"
+	"plantpal-backend/internal/infrastructure/security"
+	httpapi "plantpal-backend/internal/interface/http"
+	"plantpal-backend/internal/interface/http/authmw"
+	v1 "plantpal-backend/internal/interface/http/v1"
+	authuc "plantpal-backend/internal/usecase/auth"
+	chatuc "plantpal-backend/internal/usecase/chat"
+	diagnosisuc "plantpal-backend/internal/usecase/diagnosis"
+	fertilizeruc "plantpal-backend/internal/usecase/fertilizer"
+	orderuc "plantpal-backend/internal/usecase/order"
+	plantuc "plantpal-backend/internal/usecase/plant"
+	productuc "plantpal-backend/internal/usecase/product"
 )
 
 func main() {
@@ -51,6 +52,7 @@ func main() {
 	plantRepo := mongorepo.NewPlantRepository(db)
 	diagnosisRepo := mongorepo.NewDiagnosisRepository(db)
 	chatRepo := mongorepo.NewChatRepository(db)
+	orderRepo := mongorepo.NewOrderRepository(db)
 	if err := userRepo.EnsureIndexes(mongoCtx); err != nil {
 		log.Fatalf("user indexes: %v", err)
 	}
@@ -66,8 +68,11 @@ func main() {
 	if err := chatRepo.EnsureIndexes(mongoCtx); err != nil {
 		log.Fatalf("chat indexes: %v", err)
 	}
+	if err := orderRepo.EnsureIndexes(mongoCtx); err != nil {
+		log.Fatalf("order indexes: %v", err)
+	}
 
-	jwtIssuer := security.NewJWTIssuer(cfg.JWTSecret, "myplantpal-backend", cfg.JWTAccessTTL)
+	jwtIssuer := security.NewJWTIssuer(cfg.JWTSecret, "plantpal-backend", cfg.JWTAccessTTL)
 	authService := authuc.NewService(userRepo, refreshRepo, ids, jwtIssuer, cfg.JWTRefreshTTL)
 
 	fertilizerRepo := memory.NewFertilizerRepository(seed.Fertilizers()...)
@@ -113,6 +118,7 @@ func main() {
 		DiagnosisService:  diagnosisuc.NewService(diagnosisRepo, diagnosisProvider, ids),
 		ChatService:       chatuc.NewService(chatRepo, chatReplyProvider, ids),
 		ProductService:    productuc.NewService(productRepo, priceRefresher),
+		OrderService:      orderuc.NewService(orderRepo, productRepo, ids),
 		AuthService:       authService,
 		RequireAuth:       authmw.RequireAuth(jwtIssuer),
 	}

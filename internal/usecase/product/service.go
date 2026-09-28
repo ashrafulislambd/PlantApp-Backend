@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"myplantpal-backend/internal/domain/apperr"
-	"myplantpal-backend/internal/domain/product"
+	"plantpal-backend/internal/domain/apperr"
+	"plantpal-backend/internal/domain/product"
 )
 
 // PriceRefresherPort is an alias for the domain port, so main.go can

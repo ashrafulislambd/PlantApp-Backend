@@ -5,7 +5,7 @@ import (
 	"sort"
 	"sync"
 
-	"myplantpal-backend/internal/domain/chat"
+	"plantpal-backend/internal/domain/chat"
 )
 
 type ChatRepository struct {
