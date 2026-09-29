@@ -13,9 +13,9 @@ import (
 	"strings"
 	"time"
 
-	"myplantpal-backend/internal/domain/aiprovider"
-	"myplantpal-backend/internal/domain/chat"
-	"myplantpal-backend/internal/domain/diagnosis"
+	"plantpal-backend/internal/domain/aiprovider"
+	"plantpal-backend/internal/domain/chat"
+	"plantpal-backend/internal/domain/diagnosis"
 )
 
 const (

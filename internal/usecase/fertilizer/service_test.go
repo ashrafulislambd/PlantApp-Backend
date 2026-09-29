@@ -5,9 +5,9 @@ import (
 	"errors"
 	"testing"
 
-	"myplantpal-backend/internal/domain/apperr"
-	"myplantpal-backend/internal/idgen"
-	"myplantpal-backend/internal/infrastructure/repository/memory"
+	"plantpal-backend/internal/domain/apperr"
+	"plantpal-backend/internal/idgen"
+	"plantpal-backend/internal/infrastructure/repository/memory"
 )
 
 func newTestService() *Service {

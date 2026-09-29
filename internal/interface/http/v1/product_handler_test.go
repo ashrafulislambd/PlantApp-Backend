@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"myplantpal-backend/internal/domain/product"
-	"myplantpal-backend/internal/infrastructure/repository/memory"
-	productuc "myplantpal-backend/internal/usecase/product"
+	"plantpal-backend/internal/domain/product"
+	"plantpal-backend/internal/infrastructure/repository/memory"
+	productuc "plantpal-backend/internal/usecase/product"
 )
 
 type listEnvelope struct {

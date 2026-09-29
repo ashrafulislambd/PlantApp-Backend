@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"myplantpal-backend/internal/domain/apperr"
-	"myplantpal-backend/internal/domain/chat"
-	"myplantpal-backend/internal/idgen"
+	"plantpal-backend/internal/domain/apperr"
+	"plantpal-backend/internal/domain/chat"
+	"plantpal-backend/internal/idgen"
 )
 
 type Service struct {

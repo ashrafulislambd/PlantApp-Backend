@@ -3,7 +3,7 @@ package fertilizer_test
 import (
 	"testing"
 
-	"myplantpal-backend/internal/domain/fertilizer"
+	"plantpal-backend/internal/domain/fertilizer"
 )
 
 func TestFertilizer_Localized(t *testing.T) {

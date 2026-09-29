@@ -1,6 +1,6 @@
 package seed
 
-import "myplantpal-backend/internal/domain/product"
+import "plantpal-backend/internal/domain/product"
 
 // toolProducts returns the "gardening-tools" category. Prices are Daraz
 // Bangladesh selling prices in BDT checked on 2026-09-24; USD is derived.

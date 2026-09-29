@@ -5,11 +5,11 @@ import (
 	"errors"
 	"testing"
 
-	"myplantpal-backend/internal/domain/aiprovider"
-	"myplantpal-backend/internal/domain/apperr"
-	"myplantpal-backend/internal/domain/chat"
-	"myplantpal-backend/internal/idgen"
-	"myplantpal-backend/internal/infrastructure/repository/memory"
+	"plantpal-backend/internal/domain/aiprovider"
+	"plantpal-backend/internal/domain/apperr"
+	"plantpal-backend/internal/domain/chat"
+	"plantpal-backend/internal/idgen"
+	"plantpal-backend/internal/infrastructure/repository/memory"
 )
 
 type stubReplyProvider struct {

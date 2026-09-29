@@ -2,8 +2,8 @@ package memory
 
 import (
 	"fmt"
-	"myplantpal-backend/internal/domain/apperr"
-	"myplantpal-backend/internal/domain/product"
+	"plantpal-backend/internal/domain/apperr"
+	"plantpal-backend/internal/domain/product"
 )
 
 // ProductRepository is an in-memory implementation of product.Repository.

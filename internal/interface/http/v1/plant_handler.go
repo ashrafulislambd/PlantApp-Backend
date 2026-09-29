@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"net/http"
 
-	"myplantpal-backend/internal/domain/apperr"
-	"myplantpal-backend/internal/interface/http/authmw"
-	"myplantpal-backend/internal/interface/http/reqlocale"
-	"myplantpal-backend/internal/interface/http/respond"
-	plantuc "myplantpal-backend/internal/usecase/plant"
+	"plantpal-backend/internal/domain/apperr"
+	"plantpal-backend/internal/interface/http/authmw"
+	"plantpal-backend/internal/interface/http/reqlocale"
+	"plantpal-backend/internal/interface/http/respond"
+	plantuc "plantpal-backend/internal/usecase/plant"
 )
 
 type PlantHandler struct {

@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"strings"
 
-	"myplantpal-backend/internal/domain/apperr"
-	"myplantpal-backend/internal/interface/http/respond"
+	"plantpal-backend/internal/domain/apperr"
+	"plantpal-backend/internal/interface/http/respond"
 )
 
 type ctxKey int

@@ -3,10 +3,10 @@ package v1
 import (
 	"net/http"
 
-	"myplantpal-backend/internal/domain/product"
-	"myplantpal-backend/internal/interface/http/reqlocale"
-	"myplantpal-backend/internal/interface/http/respond"
-	productuc "myplantpal-backend/internal/usecase/product"
+	"plantpal-backend/internal/domain/product"
+	"plantpal-backend/internal/interface/http/reqlocale"
+	"plantpal-backend/internal/interface/http/respond"
+	productuc "plantpal-backend/internal/usecase/product"
 )
 
 

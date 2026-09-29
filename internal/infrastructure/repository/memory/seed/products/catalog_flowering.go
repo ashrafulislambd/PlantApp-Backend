@@ -1,6 +1,6 @@
 package seed
 
-import "myplantpal-backend/internal/domain/product"
+import "plantpal-backend/internal/domain/product"
 
 // floweringProducts returns the "flowering-plants" category. Prices are BDT
 // selling prices from Bangladeshi nurseries checked on 2026-09-24; USD is

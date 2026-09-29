@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"myplantpal-backend/internal/domain/aiprovider"
-	"myplantpal-backend/internal/domain/diagnosis"
+	"plantpal-backend/internal/domain/aiprovider"
+	"plantpal-backend/internal/domain/diagnosis"
 )
 
 const defaultVisionModel = "qwen/qwen3.8-27b"

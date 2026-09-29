@@ -4,10 +4,10 @@ import (
 	"errors"
 	"testing"
 
-	"myplantpal-backend/internal/domain/apperr"
-	"myplantpal-backend/internal/domain/product"
-	"myplantpal-backend/internal/infrastructure/repository/memory"
-	productseed "myplantpal-backend/internal/infrastructure/repository/memory/seed/products"
+	"plantpal-backend/internal/domain/apperr"
+	"plantpal-backend/internal/domain/product"
+	"plantpal-backend/internal/infrastructure/repository/memory"
+	productseed "plantpal-backend/internal/infrastructure/repository/memory/seed/products"
 )
 
 func newFixtureRepo() *memory.ProductRepository {

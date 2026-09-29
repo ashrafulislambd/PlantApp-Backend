@@ -4,8 +4,8 @@ import (
 	"context"
 	"sync/atomic"
 
-	"myplantpal-backend/internal/domain/aiprovider"
-	"myplantpal-backend/internal/domain/diagnosis"
+	"plantpal-backend/internal/domain/aiprovider"
+	"plantpal-backend/internal/domain/diagnosis"
 )
 
 var mockDiagnoses = []diagnosis.AnalysisResult{

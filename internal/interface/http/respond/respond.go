@@ -9,7 +9,7 @@ import (
 	"errors"
 	"net/http"
 
-	"myplantpal-backend/internal/domain/apperr"
+	"plantpal-backend/internal/domain/apperr"
 )
 
 type envelope struct {

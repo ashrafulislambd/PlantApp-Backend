@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"myplantpal-backend/internal/domain/diagnosis"
+	"plantpal-backend/internal/domain/diagnosis"
 )
 
 func strPtr(s string) *string { return &s }

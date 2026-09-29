@@ -1,6 +1,6 @@
 package seed
 
-import "myplantpal-backend/internal/domain/product"
+import "plantpal-backend/internal/domain/product"
 
 // fertilizerProducts returns the BDT-priced part of the "fertilizer" category.
 // Prices are selling prices checked on 2026-09-24; USD is derived from BDT.

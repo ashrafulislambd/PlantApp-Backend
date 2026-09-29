@@ -3,7 +3,7 @@ package seed
 import (
 	"time"
 
-	"myplantpal-backend/internal/domain/fertilizer"
+	"plantpal-backend/internal/domain/fertilizer"
 )
 
 func Fertilizers() []*fertilizer.Fertilizer {

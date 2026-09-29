@@ -1,6 +1,6 @@
 package seed
 
-import "myplantpal-backend/internal/domain/product"
+import "plantpal-backend/internal/domain/product"
 
 // plantProducts returns the "plants" (Houseplants) category for BDT-priced
 // Bangladeshi vendors. Prices are selling prices in BDT checked on 2026-09-24;

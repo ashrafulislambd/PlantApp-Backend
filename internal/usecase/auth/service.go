@@ -10,11 +10,11 @@ import (
 	"strings"
 	"time"
 
-	"myplantpal-backend/internal/domain/apperr"
-	"myplantpal-backend/internal/domain/refreshtoken"
-	"myplantpal-backend/internal/domain/user"
-	"myplantpal-backend/internal/idgen"
-	"myplantpal-backend/internal/infrastructure/security"
+	"plantpal-backend/internal/domain/apperr"
+	"plantpal-backend/internal/domain/refreshtoken"
+	"plantpal-backend/internal/domain/user"
+	"plantpal-backend/internal/idgen"
+	"plantpal-backend/internal/infrastructure/security"
 )
 
 type Service struct {

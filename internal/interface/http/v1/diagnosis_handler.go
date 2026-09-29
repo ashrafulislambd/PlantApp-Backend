@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"net/http"
 
-	"myplantpal-backend/internal/domain/apperr"
-	"myplantpal-backend/internal/domain/diagnosis"
-	"myplantpal-backend/internal/interface/http/authmw"
-	"myplantpal-backend/internal/interface/http/reqlocale"
-	"myplantpal-backend/internal/interface/http/respond"
-	diagnosisuc "myplantpal-backend/internal/usecase/diagnosis"
+	"plantpal-backend/internal/domain/apperr"
+	"plantpal-backend/internal/domain/diagnosis"
+	"plantpal-backend/internal/interface/http/authmw"
+	"plantpal-backend/internal/interface/http/reqlocale"
+	"plantpal-backend/internal/interface/http/respond"
+	diagnosisuc "plantpal-backend/internal/usecase/diagnosis"
 )
 
 type DiagnosisHandler struct {

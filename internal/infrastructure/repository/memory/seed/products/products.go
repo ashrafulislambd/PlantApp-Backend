@@ -10,7 +10,7 @@ import (
 	"math"
 	"time"
 
-	"myplantpal-backend/internal/domain/product"
+	"plantpal-backend/internal/domain/product"
 )
 
 // bdtPerUSD is the rate used to derive USD prices for products that are listed

@@ -133,7 +133,7 @@ func TestSeedURLsReachable(t *testing.T) {
 		if err != nil {
 			return nil, err
 		}
-		req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; MyPlantPalSeedCheck/1.0)")
+		req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; PlantPalSeedCheck/1.0)")
 		return client.Do(req)
 	}
 	for _, p := range Products() {

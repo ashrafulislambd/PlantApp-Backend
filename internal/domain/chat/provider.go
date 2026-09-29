@@ -3,7 +3,7 @@ package chat
 import (
 	"context"
 
-	"myplantpal-backend/internal/domain/aiprovider"
+	"plantpal-backend/internal/domain/aiprovider"
 )
 
 // ReplyResult is what an AI provider returns for a chat turn: the reply
