@@ -28,6 +28,7 @@ import (
 	chatuc "plantpal-backend/internal/usecase/chat"
 	diagnosisuc "plantpal-backend/internal/usecase/diagnosis"
 	fertilizeruc "plantpal-backend/internal/usecase/fertilizer"
+	orderuc "plantpal-backend/internal/usecase/order"
 	plantuc "plantpal-backend/internal/usecase/plant"
 	productuc "plantpal-backend/internal/usecase/product"
 )
@@ -52,6 +53,7 @@ func main() {
 	plantRepo := mongorepo.NewPlantRepository(db)
 	diagnosisRepo := mongorepo.NewDiagnosisRepository(db)
 	chatRepo := mongorepo.NewChatRepository(db)
+	orderRepo := mongorepo.NewOrderRepository(db)
 	if err := userRepo.EnsureIndexes(mongoCtx); err != nil {
 		log.Fatalf("user indexes: %v", err)
 	}
@@ -66,6 +68,9 @@ func main() {
 	}
 	if err := chatRepo.EnsureIndexes(mongoCtx); err != nil {
 		log.Fatalf("chat indexes: %v", err)
+	}
+	if err := orderRepo.EnsureIndexes(mongoCtx); err != nil {
+		log.Fatalf("order indexes: %v", err)
 	}
 
 	jwtIssuer := security.NewJWTIssuer(cfg.JWTSecret, "plantpal-backend", cfg.JWTAccessTTL)
@@ -114,6 +119,7 @@ func main() {
 		DiagnosisService:  diagnosisuc.NewService(diagnosisRepo, diagnosisProvider, ids),
 		ChatService:       chatuc.NewService(chatRepo, chatReplyProvider, ids),
 		ProductService:    productuc.NewService(productRepo, priceRefresher),
+		OrderService:      orderuc.NewService(orderRepo, productRepo, ids),
 		AuthService:       authService,
 		RequireAuth:       authmw.RequireAuth(jwtIssuer),
 	}

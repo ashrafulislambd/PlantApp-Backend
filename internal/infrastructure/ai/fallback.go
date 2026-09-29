@@ -2,6 +2,7 @@ package ai
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -33,6 +34,10 @@ func NewFallbackChatProvider(entries ...ChatProviderEntry) *FallbackChatProvider
 }
 
 func (f *FallbackChatProvider) Reply(ctx context.Context, history []*chat.Message, userMessage string, lang string) (chat.ReplyResult, error) {
+	if len(f.entries) == 0 {
+		return chat.ReplyResult{}, fmt.Errorf("ai: no providers configured")
+	}
+
 	var lastErr error
 	for _, e := range f.entries {
 		attemptCtx, cancel := context.WithTimeout(ctx, providerTimeout)
@@ -67,6 +72,10 @@ func NewFallbackDiagnosisProvider(entries ...DiagnosisProviderEntry) *FallbackDi
 }
 
 func (f *FallbackDiagnosisProvider) Analyze(ctx context.Context, imageData []byte) (diagnosis.AnalysisResult, error) {
+	if len(f.entries) == 0 {
+		return diagnosis.AnalysisResult{}, fmt.Errorf("ai: no providers configured")
+	}
+
 	var lastErr error
 	for _, e := range f.entries {
 		attemptCtx, cancel := context.WithTimeout(ctx, providerTimeout)

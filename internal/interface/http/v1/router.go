@@ -1,3 +1,9 @@
+<<<<<<< HEAD
+=======
+// Package v1 is the first version of the HTTP API surface, mounted under
+// /api/v1. A future breaking change gets its own v2 package mounted
+// alongside it, so both can be served at once during a migration.
+>>>>>>> origin/main
 package v1
 
 import (
@@ -8,6 +14,10 @@ import (
 	chatuc "plantpal-backend/internal/usecase/chat"
 	diagnosisuc "plantpal-backend/internal/usecase/diagnosis"
 	fertilizeruc "plantpal-backend/internal/usecase/fertilizer"
+<<<<<<< HEAD
+=======
+	orderuc "plantpal-backend/internal/usecase/order"
+>>>>>>> origin/main
 	plantuc "plantpal-backend/internal/usecase/plant"
 	productuc "plantpal-backend/internal/usecase/product"
 )
@@ -19,6 +29,7 @@ type Dependencies struct {
 	DiagnosisService  *diagnosisuc.Service
 	ChatService       *chatuc.Service
 	ProductService    *productuc.Service
+	OrderService      *orderuc.Service
 	AuthService       *authuc.Service
 	RequireAuth       func(http.HandlerFunc) http.HandlerFunc
 }
@@ -64,6 +75,11 @@ func RegisterRoutes(mux *http.ServeMux, deps Dependencies) {
 	mux.HandleFunc("GET "+basePath+"/products", deps.RequireAuth(prodH.List))
 	mux.HandleFunc("GET "+basePath+"/products/{id}", deps.RequireAuth(prodH.Get))
 	mux.HandleFunc("POST "+basePath+"/products/{id}/refresh", deps.RequireAuth(prodH.Refresh))
+
+	orderH := NewOrderHandler(deps.OrderService)
+	mux.HandleFunc("POST "+basePath+"/orders", deps.RequireAuth(orderH.Create))
+	mux.HandleFunc("GET "+basePath+"/orders", deps.RequireAuth(orderH.List))
+	mux.HandleFunc("GET "+basePath+"/orders/{id}", deps.RequireAuth(orderH.Get))
 }
 
 func HealthCheck(w http.ResponseWriter, r *http.Request) {
