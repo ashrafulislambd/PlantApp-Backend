@@ -2,10 +2,12 @@ package ai
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"time"
 
+	"plantpal-backend/internal/domain/apperr"
 	"plantpal-backend/internal/domain/chat"
 	"plantpal-backend/internal/domain/diagnosis"
 )
@@ -18,6 +20,10 @@ const providerTimeout = 20 * time.Second
 type ChatProviderEntry struct {
 	Name     string
 	Provider chat.ReplyProvider
+	// Placeholder marks a canned last-resort provider (the mock). If a real
+	// provider before it was rate limited, the chain returns
+	// apperr.ErrRateLimited instead of masking it with placeholder output.
+	Placeholder bool
 }
 
 // FallbackChatProvider tries each entry in order, logging a warning and
@@ -39,7 +45,11 @@ func (f *FallbackChatProvider) Reply(ctx context.Context, history []*chat.Messag
 	}
 
 	var lastErr error
+	rateLimited := false
 	for _, e := range f.entries {
+		if e.Placeholder && rateLimited {
+			return chat.ReplyResult{}, apperr.ErrRateLimited
+		}
 		attemptCtx, cancel := context.WithTimeout(ctx, providerTimeout)
 		result, err := e.Provider.Reply(attemptCtx, history, userMessage, lang)
 		cancel()
@@ -47,6 +57,9 @@ func (f *FallbackChatProvider) Reply(ctx context.Context, history []*chat.Messag
 			return result, nil
 		}
 		log.Printf("ai: %s provider failed, falling back: %v", e.Name, err)
+		if errors.Is(err, apperr.ErrRateLimited) {
+			rateLimited = true
+		}
 		lastErr = err
 	}
 	return chat.ReplyResult{}, lastErr
@@ -55,8 +68,9 @@ func (f *FallbackChatProvider) Reply(ctx context.Context, history []*chat.Messag
 // DiagnosisProviderEntry is the diagnosis.Provider equivalent of
 // ChatProviderEntry.
 type DiagnosisProviderEntry struct {
-	Name     string
-	Provider diagnosis.Provider
+	Name        string
+	Provider    diagnosis.Provider
+	Placeholder bool // see ChatProviderEntry.Placeholder
 }
 
 // FallbackDiagnosisProvider is the diagnosis.Provider equivalent of
@@ -77,7 +91,11 @@ func (f *FallbackDiagnosisProvider) Analyze(ctx context.Context, imageData []byt
 	}
 
 	var lastErr error
+	rateLimited := false
 	for _, e := range f.entries {
+		if e.Placeholder && rateLimited {
+			return diagnosis.AnalysisResult{}, apperr.ErrRateLimited
+		}
 		attemptCtx, cancel := context.WithTimeout(ctx, providerTimeout)
 		result, err := e.Provider.Analyze(attemptCtx, imageData)
 		cancel()
@@ -85,6 +103,9 @@ func (f *FallbackDiagnosisProvider) Analyze(ctx context.Context, imageData []byt
 			return result, nil
 		}
 		log.Printf("ai: %s provider failed, falling back: %v", e.Name, err)
+		if errors.Is(err, apperr.ErrRateLimited) {
+			rateLimited = true
+		}
 		lastErr = err
 	}
 	return diagnosis.AnalysisResult{}, lastErr

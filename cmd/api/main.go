@@ -75,6 +75,12 @@ func main() {
 
 	jwtIssuer := security.NewJWTIssuer(cfg.JWTSecret, "plantpal-backend", cfg.JWTAccessTTL)
 	authService := authuc.NewService(userRepo, refreshRepo, ids, jwtIssuer, cfg.JWTRefreshTTL)
+	if len(cfg.GoogleClientIDs) > 0 {
+		authService.SetGoogleVerifier(security.NewGoogleVerifier(cfg.GoogleClientIDs))
+		log.Println("Google sign-in: enabled")
+	} else {
+		log.Println("Google sign-in: disabled (set GOOGLE_CLIENT_ID to enable)")
+	}
 
 	fertilizerRepo := memory.NewFertilizerRepository(seed.Fertilizers()...)
 	productRepo := memory.NewProductRepository(productseed.Products(), productseed.Categories())
@@ -104,8 +110,8 @@ func main() {
 			Provider: groq.NewDiagnosisProvider(cfg.GroqAPIKey, cfg.GroqVisionModel),
 		})
 	}
-	chatEntries = append(chatEntries, ai.ChatProviderEntry{Name: "mock", Provider: ai.NewMockChatReplyProvider()})
-	diagnosisEntries = append(diagnosisEntries, ai.DiagnosisProviderEntry{Name: "mock", Provider: ai.NewMockDiagnosisProvider()})
+	chatEntries = append(chatEntries, ai.ChatProviderEntry{Name: "mock", Provider: ai.NewMockChatReplyProvider(), Placeholder: true})
+	diagnosisEntries = append(diagnosisEntries, ai.DiagnosisProviderEntry{Name: "mock", Provider: ai.NewMockDiagnosisProvider(), Placeholder: true})
 
 	log.Printf("AI providers: gemini=%v groq=%v (mock always available as last resort)",
 		cfg.GeminiAPIKey != "", cfg.GroqAPIKey != "")

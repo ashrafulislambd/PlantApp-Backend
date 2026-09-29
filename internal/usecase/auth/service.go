@@ -23,6 +23,7 @@ type Service struct {
 	ids        idgen.Generator
 	jwt        *security.JWTIssuer
 	refreshTTL time.Duration
+	google     GoogleVerifier // nil = Google sign-in disabled
 }
 
 func NewService(users user.Repository, tokens refreshtoken.Repository, ids idgen.Generator, jwtIssuer *security.JWTIssuer, refreshTTL time.Duration) *Service {

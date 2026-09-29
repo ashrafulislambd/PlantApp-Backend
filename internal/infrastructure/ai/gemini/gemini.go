@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"plantpal-backend/internal/domain/apperr"
 	"plantpal-backend/internal/domain/aiprovider"
 	"plantpal-backend/internal/domain/chat"
 	"plantpal-backend/internal/domain/diagnosis"
@@ -130,6 +131,9 @@ func (c *Client) do(ctx context.Context, req geminiRequest) (string, error) {
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode == http.StatusTooManyRequests {
+		return "", fmt.Errorf("gemini: status 429: %w", apperr.ErrRateLimited)
+	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return "", fmt.Errorf("gemini: status %d", resp.StatusCode)
 	}
