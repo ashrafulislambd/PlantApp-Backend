@@ -30,14 +30,14 @@ func RegisterRoutes(mux *http.ServeMux, deps Dependencies) {
 	mux.HandleFunc("GET "+basePath+"/health", HealthCheck)
 
 	plantH := NewPlantHandler(deps.PlantService)
-mux.HandleFunc("POST "+basePath+"/plants", deps.RequireAuth(plantH.Create))
-mux.HandleFunc("GET "+basePath+"/plants", deps.RequireAuth(plantH.List))
-mux.HandleFunc("GET "+basePath+"/plants/due", deps.RequireAuth(plantH.Due))
-mux.HandleFunc("GET "+basePath+"/plants/{id}", deps.RequireAuth(plantH.Get))
-mux.HandleFunc("PATCH "+basePath+"/plants/{id}", deps.RequireAuth(plantH.Update))
-mux.HandleFunc("DELETE "+basePath+"/plants/{id}", deps.RequireAuth(plantH.Delete))
-mux.HandleFunc("POST "+basePath+"/plants/{id}/water", deps.RequireAuth(plantH.MarkWatered))
-mux.HandleFunc("POST "+basePath+"/plants/{id}/fertilize", deps.RequireAuth(plantH.MarkFertilized))
+	mux.HandleFunc("POST "+basePath+"/plants", deps.RequireAuth(plantH.Create))
+	mux.HandleFunc("GET "+basePath+"/plants", deps.RequireAuth(plantH.List))
+	mux.HandleFunc("GET "+basePath+"/plants/due", deps.RequireAuth(plantH.Due))
+	mux.HandleFunc("GET "+basePath+"/plants/{id}", deps.RequireAuth(plantH.Get))
+	mux.HandleFunc("PATCH "+basePath+"/plants/{id}", deps.RequireAuth(plantH.Update))
+	mux.HandleFunc("DELETE "+basePath+"/plants/{id}", deps.RequireAuth(plantH.Delete))
+	mux.HandleFunc("POST "+basePath+"/plants/{id}/water", deps.RequireAuth(plantH.MarkWatered))
+	mux.HandleFunc("POST "+basePath+"/plants/{id}/fertilize", deps.RequireAuth(plantH.MarkFertilized))
 
 	authH := NewAuthHandler(deps.AuthService)
 	mux.HandleFunc("POST "+basePath+"/auth/register", authH.Register)
@@ -69,4 +69,3 @@ mux.HandleFunc("POST "+basePath+"/plants/{id}/fertilize", deps.RequireAuth(plant
 func HealthCheck(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, http.StatusOK, map[string]string{"status": "ok", "version": "v1"})
 }
-

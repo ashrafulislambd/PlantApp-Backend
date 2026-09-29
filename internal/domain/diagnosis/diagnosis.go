@@ -9,6 +9,7 @@ const Disclaimer = "This result is AI-assisted and may be inaccurate. " +
 
 const DisclaimerBn = "এই তথ্যটি AI-এর সাহায্যে তৈরি, তাই এতে ভুল থাকতে পারে। " +
 	"সঠিক সিদ্ধান্তের জন্য অনুগ্রহ করে উদ্ভিদ বিশেষজ্ঞের পরামর্শ নিন।"
+
 // Diagnosis is the result of analyzing a plant photo.
 //
 // The Bn fields hold Bengali translations of the result; they're excluded

@@ -1,8 +1,8 @@
 package plant
 
 import (
-"context"
-"time"
+	"context"
+	"time"
 )
 
 // Repository persists Plants. The MongoDB implementation lives in
@@ -15,12 +15,12 @@ import (
 // that doesn't exist (apperr.ErrNotFound), so callers can't probe for other
 // users' data. Update is scoped by p.UserID.
 type Repository interface {
-Create(ctx context.Context, p *Plant) error
-GetByID(ctx context.Context, id, userID string) (*Plant, error)
-List(ctx context.Context, userID string) ([]*Plant, error)
-Update(ctx context.Context, p *Plant) error
-Delete(ctx context.Context, id, userID string) error
-// ListDue returns the user's plants whose next watering/fertilizing is
-// due at or before `before`. Used by reminders and notifications.
-ListDue(ctx context.Context, userID string, before time.Time) ([]*Plant, error)
+	Create(ctx context.Context, p *Plant) error
+	GetByID(ctx context.Context, id, userID string) (*Plant, error)
+	List(ctx context.Context, userID string) ([]*Plant, error)
+	Update(ctx context.Context, p *Plant) error
+	Delete(ctx context.Context, id, userID string) error
+	// ListDue returns the user's plants whose next watering/fertilizing is
+	// due at or before `before`. Used by reminders and notifications.
+	ListDue(ctx context.Context, userID string, before time.Time) ([]*Plant, error)
 }

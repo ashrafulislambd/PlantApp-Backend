@@ -9,7 +9,6 @@ import (
 	productuc "plantpal-backend/internal/usecase/product"
 )
 
-
 var categoryNamesBn = map[string]string{
 	"plants":             "ইনডোর গাছ",
 	"outdoor-plants":     "আউটডোর গাছ",

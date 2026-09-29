@@ -23,16 +23,16 @@ const (
 )
 
 type cacheEntry struct {
-	result *product.RefreshResult
+	result   *product.RefreshResult
 	cachedAt time.Time
 }
 
 // PriceRefresher calls Groq Compound with a tightly scoped prompt and
 // caches results server-side for 6 hours per product.
 type PriceRefresher struct {
-	apiKey  string
-	client  *http.Client
-	cache   map[string]cacheEntry
+	apiKey string
+	client *http.Client
+	cache  map[string]cacheEntry
 }
 
 // New creates a PriceRefresher. apiKey is your Groq API key (from env).

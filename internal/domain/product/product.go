@@ -1,4 +1,4 @@
-﻿// Package product holds the Product entity and its repository contract.
+// Package product holds the Product entity and its repository contract.
 package product
 
 import "time"
