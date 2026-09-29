@@ -36,6 +36,11 @@ func Error(w http.ResponseWriter, err error) {
 		status = http.StatusConflict
 	case errors.Is(err, apperr.ErrUnauthorized):
 		status = http.StatusUnauthorized
+	case errors.Is(err, apperr.ErrUnavailable):
+		status = http.StatusServiceUnavailable
+	case errors.Is(err, apperr.ErrRateLimited):
+		status = http.StatusTooManyRequests
+		w.Header().Set("Retry-After", "10")
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)

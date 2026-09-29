@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"plantpal-backend/internal/domain/apperr"
 	"plantpal-backend/internal/domain/product"
 )
 
@@ -99,6 +100,9 @@ func (r *PriceRefresher) RefreshPrice(p *product.Product) (*product.RefreshResul
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode == http.StatusTooManyRequests {
+		return nil, fmt.Errorf("groq: status 429: %w", apperr.ErrRateLimited)
+	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("groq: status %d", resp.StatusCode)
 	}

@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -28,6 +29,11 @@ type Config struct {
 	JWTSecret     string
 	JWTAccessTTL  time.Duration
 	JWTRefreshTTL time.Duration
+
+	// GoogleClientIDs are the OAuth client IDs whose Google ID tokens the
+	// backend accepts (the *Web* client ID the Flutter app uses as its
+	// serverClientId). Empty disables POST /api/v1/auth/google.
+	GoogleClientIDs []string
 }
 
 func Load() Config {
@@ -55,7 +61,19 @@ func Load() Config {
 		JWTSecret:     os.Getenv("JWT_SECRET"),
 		JWTAccessTTL:  getDuration("JWT_ACCESS_TTL", 15*time.Minute),
 		JWTRefreshTTL: getDuration("JWT_REFRESH_TTL", 30*24*time.Hour),
+
+		GoogleClientIDs: splitCSV(os.Getenv("GOOGLE_CLIENT_ID")),
 	}
+}
+
+func splitCSV(s string) []string {
+	var out []string
+	for _, p := range strings.Split(s, ",") {
+		if p = strings.TrimSpace(p); p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
 }
 
 func getDuration(key string, fallback time.Duration) time.Duration {

@@ -10,4 +10,10 @@ var (
 	ErrInvalidInput = errors.New("invalid input")
 	ErrConflict     = errors.New("resource already exists")
 	ErrUnauthorized = errors.New("unauthorized")
+	// ErrRateLimited means an upstream service (e.g. an AI provider) rejected
+	// the call because its quota was exhausted; the client should retry later.
+	ErrRateLimited = errors.New("rate limit reached, please try again shortly")
+	// ErrUnavailable means a feature is switched off by server configuration
+	// (e.g. Google sign-in without GOOGLE_CLIENT_ID).
+	ErrUnavailable = errors.New("feature unavailable")
 )
