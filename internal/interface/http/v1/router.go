@@ -1,9 +1,6 @@
-<<<<<<< HEAD
-=======
 // Package v1 is the first version of the HTTP API surface, mounted under
 // /api/v1. A future breaking change gets its own v2 package mounted
 // alongside it, so both can be served at once during a migration.
->>>>>>> origin/main
 package v1
 
 import (
@@ -14,10 +11,7 @@ import (
 	chatuc "plantpal-backend/internal/usecase/chat"
 	diagnosisuc "plantpal-backend/internal/usecase/diagnosis"
 	fertilizeruc "plantpal-backend/internal/usecase/fertilizer"
-<<<<<<< HEAD
-=======
 	orderuc "plantpal-backend/internal/usecase/order"
->>>>>>> origin/main
 	plantuc "plantpal-backend/internal/usecase/plant"
 	productuc "plantpal-backend/internal/usecase/product"
 )
