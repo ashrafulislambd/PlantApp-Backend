@@ -3,7 +3,7 @@ package chat
 import (
 	"context"
 
-	"myplantpal-backend/internal/domain/aiprovider"
+	"plantpal-backend/internal/domain/aiprovider"
 )
 
 // ReplyResult is what an AI provider returns for a chat turn: the reply
@@ -17,5 +17,5 @@ type ReplyResult struct {
 // The in-memory mock in internal/infrastructure/ai satisfies it for now;
 // swap it for a real Gemini/Groq-backed implementation later.
 type ReplyProvider interface {
-	Reply(ctx context.Context, history []*Message, userMessage string) (ReplyResult, error)
+	Reply(ctx context.Context, history []*Message, userMessage string, lang string) (ReplyResult, error)
 }

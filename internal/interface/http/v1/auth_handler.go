@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"net/http"
 
-	"myplantpal-backend/internal/domain/apperr"
-	"myplantpal-backend/internal/domain/user"
-	"myplantpal-backend/internal/interface/http/authmw"
-	"myplantpal-backend/internal/interface/http/respond"
-	authuc "myplantpal-backend/internal/usecase/auth"
+	"plantpal-backend/internal/domain/apperr"
+	"plantpal-backend/internal/domain/user"
+	"plantpal-backend/internal/interface/http/authmw"
+	"plantpal-backend/internal/interface/http/respond"
+	authuc "plantpal-backend/internal/usecase/auth"
 )
 
 type AuthHandler struct {

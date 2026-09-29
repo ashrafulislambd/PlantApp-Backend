@@ -1,9 +1,9 @@
-﻿package memory
+package memory
 
 import (
 	"fmt"
-	"myplantpal-backend/internal/domain/apperr"
-	"myplantpal-backend/internal/domain/product"
+	"plantpal-backend/internal/domain/apperr"
+	"plantpal-backend/internal/domain/product"
 )
 
 // ProductRepository is an in-memory implementation of product.Repository.
@@ -22,13 +22,14 @@ func NewProductRepository(products []*product.Product, categories []*product.Cat
 	return &ProductRepository{products: products, categories: categories, byID: idx}
 }
 
+// List returns products in seed order. An empty categoryID returns every
+// product; otherwise only products whose CategoryID matches exactly. The
+// result is always a fresh, non-nil slice so it marshals as [] (never null)
+// and callers cannot mutate the repository's internal ordering.
 func (r *ProductRepository) List(categoryID string) ([]*product.Product, error) {
-	if categoryID == "" {
-		return r.products, nil
-	}
-	var out []*product.Product
+	out := make([]*product.Product, 0, len(r.products))
 	for _, p := range r.products {
-		if p.CategoryID == categoryID {
+		if categoryID == "" || p.CategoryID == categoryID {
 			out = append(out, p)
 		}
 	}

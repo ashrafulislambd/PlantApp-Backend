@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"strings"
 
-	"myplantpal-backend/internal/domain/apperr"
-	"myplantpal-backend/internal/interface/http/respond"
+	"plantpal-backend/internal/domain/apperr"
+	"plantpal-backend/internal/interface/http/respond"
 )
 
 type ctxKey int
@@ -43,4 +43,9 @@ func RequireAuth(parser TokenParser) func(http.HandlerFunc) http.HandlerFunc {
 func UserID(ctx context.Context) (string, bool) {
 	id, ok := ctx.Value(userIDKey).(string)
 	return id, ok
+}
+
+// WithUserID returns a context copy with the user ID set (useful for tests and internal requests).
+func WithUserID(ctx context.Context, userID string) context.Context {
+	return context.WithValue(ctx, userIDKey, userID)
 }

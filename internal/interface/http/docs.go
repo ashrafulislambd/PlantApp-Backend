@@ -14,7 +14,7 @@ const swaggerUIPage = `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>MyPlantPal API Docs</title>
+  <title>PlantPal API Docs</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css" />
 </head>
 <body>

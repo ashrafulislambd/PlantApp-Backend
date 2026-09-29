@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"myplantpal-backend/internal/domain/apperr"
-	"myplantpal-backend/internal/domain/fertilizer"
+	"plantpal-backend/internal/domain/apperr"
+	"plantpal-backend/internal/domain/fertilizer"
 )
 
 func seedFertilizers() []*fertilizer.Fertilizer {

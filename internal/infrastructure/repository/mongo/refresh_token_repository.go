@@ -7,8 +7,8 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 
-	"myplantpal-backend/internal/domain/apperr"
-	"myplantpal-backend/internal/domain/refreshtoken"
+	"plantpal-backend/internal/domain/apperr"
+	"plantpal-backend/internal/domain/refreshtoken"
 )
 
 type RefreshTokenRepository struct {

@@ -1,27 +1,19 @@
-// Package fertilizer holds the Fertilizer entity and its repository
-// contract, modeling the "Fertilizer Making" screen: a searchable list of
-// homemade fertilizer recipes.
 package fertilizer
 
 import "time"
 
-// Fertilizer is a homemade fertilizer recipe, e.g. "Nitrogen (leaf growth)".
-//
-// The Bn fields hold Bengali translations for seed data; they're excluded
-// from JSON directly (json:"-") and only surfaced through Localized, which
-// picks the requested language and falls back to the base (English)
-// fields when no translation exists — e.g. for fertilizers a user adds
-// themselves, which only exist in whatever language they typed.
+// Fertilizer is a homemade organic fertilizer recipe shown on the
+// Fertilizer screen.
 type Fertilizer struct {
-	ID           string    `json:"id"`
-	Name         string    `json:"name"`
-	Category     string    `json:"category"`
-	Instructions string    `json:"instructions"`
-	CreatedAt    time.Time `json:"createdAt"`
+	ID           string    `json:"id" bson:"_id"`
+	Name         string    `json:"name" bson:"name"`
+	Category     string    `json:"category" bson:"category"`
+	Instructions string    `json:"instructions" bson:"instructions"`
+	CreatedAt    time.Time `json:"createdAt" bson:"createdAt"`
 
-	NameBn         string `json:"-"`
-	CategoryBn     string `json:"-"`
-	InstructionsBn string `json:"-"`
+	NameBn         string `json:"-" bson:"nameBn,omitempty"`
+	CategoryBn     string `json:"-" bson:"categoryBn,omitempty"`
+	InstructionsBn string `json:"-" bson:"instructionsBn,omitempty"`
 }
 
 // Localized returns a copy with Name/Category/Instructions swapped for
@@ -31,7 +23,11 @@ func (f Fertilizer) Localized(lang string) Fertilizer {
 		return f
 	}
 	f.Name = f.NameBn
-	f.Category = f.CategoryBn
-	f.Instructions = f.InstructionsBn
+	if f.CategoryBn != "" {
+		f.Category = f.CategoryBn
+	}
+	if f.InstructionsBn != "" {
+		f.Instructions = f.InstructionsBn
+	}
 	return f
 }

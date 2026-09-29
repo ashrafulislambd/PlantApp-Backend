@@ -3,7 +3,7 @@ package diagnosis
 import (
 	"context"
 
-	"myplantpal-backend/internal/domain/aiprovider"
+	"plantpal-backend/internal/domain/aiprovider"
 )
 
 // AnalysisResult is what an AI provider returns for a submitted photo.

@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"net/http"
 
-	"myplantpal-backend/internal/domain/apperr"
-	"myplantpal-backend/internal/interface/http/respond"
-	chatuc "myplantpal-backend/internal/usecase/chat"
+	"plantpal-backend/internal/domain/apperr"
+	"plantpal-backend/internal/interface/http/authmw"
+	"plantpal-backend/internal/interface/http/reqlocale"
+	"plantpal-backend/internal/interface/http/respond"
+	chatuc "plantpal-backend/internal/usecase/chat"
 )
 
 type ChatHandler struct {
@@ -31,9 +33,12 @@ func (h *ChatHandler) Send(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	userID, _ := authmw.UserID(r.Context())
 	msgs, err := h.svc.Send(r.Context(), chatuc.SendInput{
+		UserID:    userID,
 		SessionID: req.SessionID,
 		Content:   req.Content,
+		Lang:      reqlocale.Resolve(r),
 	})
 	if err != nil {
 		respond.Error(w, err)
@@ -49,7 +54,8 @@ func (h *ChatHandler) List(w http.ResponseWriter, r *http.Request) {
 		respond.Error(w, fmt.Errorf("%w: sessionId query param is required", apperr.ErrInvalidInput))
 		return
 	}
-	items, err := h.svc.List(r.Context(), sessionID)
+	userID, _ := authmw.UserID(r.Context())
+	items, err := h.svc.List(r.Context(), userID, sessionID)
 	if err != nil {
 		respond.Error(w, err)
 		return

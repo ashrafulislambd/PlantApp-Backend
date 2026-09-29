@@ -14,10 +14,11 @@ const (
 
 // Message is a single turn in a chat session.
 type Message struct {
-	ID        string    `json:"id"`
-	SessionID string    `json:"sessionId"`
-	Role      Role      `json:"role"`
-	Content   string    `json:"content"`
-	CreatedAt time.Time `json:"createdAt"`
-	Provider  string    `json:"provider,omitempty"`
+	ID        string    `json:"id" bson:"_id"`
+	UserID    string    `json:"userId" bson:"userId"`
+	SessionID string    `json:"sessionId" bson:"sessionId"`
+	Role      Role      `json:"role" bson:"role"`
+	Content   string    `json:"content" bson:"content"`
+	CreatedAt time.Time `json:"createdAt" bson:"createdAt"`
+	Provider  string    `json:"provider,omitempty" bson:"provider,omitempty"`
 }
