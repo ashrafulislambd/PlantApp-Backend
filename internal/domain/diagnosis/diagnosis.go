@@ -7,9 +7,8 @@ import "time"
 const Disclaimer = "This result is AI-assisted and may be inaccurate. " +
 	"It is not a substitute for professional horticultural or botanical advice."
 
-const DisclaimerBn = "এই ফলাফল AI-সহায়তায় প্রাপ্ত এবং ভুল হতে পারে। " +
-	"এটি পেশাদার উদ্ভিদবিদ্যা পরামর্শের বিকল্প নয়।"
-
+const DisclaimerBn = "এই তথ্যটি AI-এর সাহায্যে তৈরি, তাই এতে ভুল থাকতে পারে। " +
+	"সঠিক সিদ্ধান্তের জন্য অনুগ্রহ করে উদ্ভিদ বিশেষজ্ঞের পরামর্শ নিন।"
 // Diagnosis is the result of analyzing a plant photo.
 //
 // The Bn fields hold Bengali translations of the result; they're excluded
