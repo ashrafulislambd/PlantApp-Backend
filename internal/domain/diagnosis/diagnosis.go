@@ -29,6 +29,10 @@ type Diagnosis struct {
 	IssueBn      string `json:"-" bson:"issueBn,omitempty"`
 	CureBn       string `json:"-" bson:"cureBn,omitempty"`
 	DisclaimerBn string `json:"-" bson:"disclaimerBn,omitempty"`
+
+ImageKey         string `json:"-" bson:"imageKey,omitempty"`
+ImageContentType string `json:"-" bson:"imageContentType,omitempty"`
+ImageURL         string `json:"imageUrl,omitempty" bson:"-"`
 }
 
 // Localized returns a copy with Issue/Cure/Disclaimer swapped for their

@@ -5,44 +5,46 @@
 package respond
 
 import (
-	"encoding/json"
-	"errors"
-	"net/http"
+"encoding/json"
+"errors"
+"net/http"
 
-	"plantpal-backend/internal/domain/apperr"
+"plantpal-backend/internal/domain/apperr"
 )
 
 type envelope struct {
-	Data  any    `json:"data,omitempty"`
-	Error string `json:"error,omitempty"`
+Data  any    `json:"data,omitempty"`
+Error string `json:"error,omitempty"`
 }
 
 func JSON(w http.ResponseWriter, status int, data any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(envelope{Data: data})
+w.Header().Set("Content-Type", "application/json")
+w.WriteHeader(status)
+_ = json.NewEncoder(w).Encode(envelope{Data: data})
 }
 
 // Error maps a domain sentinel error (via errors.Is) to an HTTP status code
 // and writes a JSON error envelope. Unrecognized errors become 500s.
 func Error(w http.ResponseWriter, err error) {
-	status := http.StatusInternalServerError
-	switch {
-	case errors.Is(err, apperr.ErrNotFound):
-		status = http.StatusNotFound
-	case errors.Is(err, apperr.ErrInvalidInput):
-		status = http.StatusBadRequest
-	case errors.Is(err, apperr.ErrConflict):
-		status = http.StatusConflict
-	case errors.Is(err, apperr.ErrUnauthorized):
-		status = http.StatusUnauthorized
-	case errors.Is(err, apperr.ErrUnavailable):
-		status = http.StatusServiceUnavailable
-	case errors.Is(err, apperr.ErrRateLimited):
-		status = http.StatusTooManyRequests
-		w.Header().Set("Retry-After", "10")
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(envelope{Error: err.Error()})
+status := http.StatusInternalServerError
+switch {
+case errors.Is(err, apperr.ErrNotFound):
+status = http.StatusNotFound
+case errors.Is(err, apperr.ErrInvalidInput):
+status = http.StatusBadRequest
+case errors.Is(err, apperr.ErrConflict):
+status = http.StatusConflict
+case errors.Is(err, apperr.ErrUnauthorized):
+status = http.StatusUnauthorized
+case errors.Is(err, apperr.ErrUnavailable):
+status = http.StatusServiceUnavailable
+case errors.Is(err, apperr.ErrPayloadTooLarge):
+status = http.StatusRequestEntityTooLarge
+case errors.Is(err, apperr.ErrRateLimited):
+status = http.StatusTooManyRequests
+w.Header().Set("Retry-After", "10")
+}
+w.Header().Set("Content-Type", "application/json")
+w.WriteHeader(status)
+_ = json.NewEncoder(w).Encode(envelope{Error: err.Error()})
 }

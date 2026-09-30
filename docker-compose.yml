@@ -20,6 +20,12 @@ services:
       JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
       JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-720h}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      UPLOAD_DIR: /data/uploads
+      MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-8388608}
+      FCM_CREDENTIALS_JSON: ${FCM_CREDENTIALS_JSON:-}
+      REMINDER_INTERVAL: ${REMINDER_INTERVAL:-1m}
+    volumes:
+      - uploads_data:/data/uploads
     depends_on:
       mongo:
         condition: service_healthy
@@ -47,3 +53,4 @@ services:
 
 volumes:
   mongo_data:
+  uploads_data:
