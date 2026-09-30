@@ -22,6 +22,9 @@ type Diagnosis struct {
 	PlantID    *string   `json:"plantId,omitempty" bson:"plantId,omitempty"`
 	Issue      string    `json:"issue" bson:"issue"`
 	Cure       string    `json:"cure" bson:"cure"`
+	Confidence string    `json:"confidence,omitempty" bson:"confidence,omitempty"`
+	Severity   string    `json:"severity,omitempty" bson:"severity,omitempty"`
+	Fertilizer string    `json:"fertilizer,omitempty" bson:"fertilizer,omitempty"`
 	Disclaimer string    `json:"disclaimer" bson:"disclaimer"`
 	CreatedAt  time.Time `json:"createdAt" bson:"createdAt"`
 	Provider   string    `json:"provider,omitempty" bson:"provider,omitempty"`

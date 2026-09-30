@@ -90,6 +90,9 @@ Reply ONLY as valid JSON with exactly these keys:
 {
   "issue": "<short description of the problem in English>",
   "cure": "<short, actionable treatment in English>",
+  "confidence": "High|Moderate|Low",
+  "severity": "Mild|Moderate|Severe",
+  "fertilizer": "<a short fertilizer or nutrient suggestion, or empty string if not applicable>",
   "issueBn": "<short description of the problem translated into natural Bengali/বাংলা>",
   "cureBn": "<short, actionable treatment translated into natural Bengali/বাংলা>"
 }
@@ -182,10 +185,13 @@ func (c *Client) Reply(ctx context.Context, history []*chat.Message, userMessage
 }
 
 type diagnosisJSON struct {
-	Issue   string `json:"issue"`
-	Cure    string `json:"cure"`
-	IssueBn string `json:"issueBn,omitempty"`
-	CureBn  string `json:"cureBn,omitempty"`
+	Issue      string `json:"issue"`
+	Cure       string `json:"cure"`
+	Confidence string `json:"confidence,omitempty"`
+	Severity   string `json:"severity,omitempty"`
+	Fertilizer string `json:"fertilizer,omitempty"`
+	IssueBn    string `json:"issueBn,omitempty"`
+	CureBn     string `json:"cureBn,omitempty"`
 }
 
 // Analyze implements diagnosis.Provider.
@@ -220,10 +226,13 @@ func (c *Client) Analyze(ctx context.Context, imageData []byte) (diagnosis.Analy
 	}
 
 	return diagnosis.AnalysisResult{
-		Issue:    dj.Issue,
-		Cure:     dj.Cure,
-		IssueBn:  dj.IssueBn,
-		CureBn:   dj.CureBn,
-		Provider: aiprovider.Gemini,
+		Issue:      dj.Issue,
+		Cure:       dj.Cure,
+		Confidence: dj.Confidence,
+		Severity:   dj.Severity,
+		Fertilizer: dj.Fertilizer,
+		IssueBn:    dj.IssueBn,
+		CureBn:     dj.CureBn,
+		Provider:   aiprovider.Gemini,
 	}, nil
 }

@@ -17,6 +17,10 @@ func NewRouter(v1Deps v1.Dependencies) http.Handler {
 	mux.HandleFunc("GET /docs", docsHandler)
 	mux.HandleFunc("GET /openapi.yaml", openAPISpecHandler)
 
+	aiH := &aiHandler{chatSvc: v1Deps.ChatService, diagnosisSvc: v1Deps.DiagnosisService}
+	mux.HandleFunc("POST /ai/chat", v1Deps.RequireAuth(aiH.Chat))
+	mux.HandleFunc("POST /ai/diagnose", v1Deps.RequireAuth(aiH.Diagnose))
+
 	v1.RegisterRoutes(mux, v1Deps)
 
 	return withMiddleware(mux)

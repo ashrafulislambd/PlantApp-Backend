@@ -10,11 +10,14 @@ import (
 // IssueBn/CureBn are optional Bengali translations; a real AI provider can
 // leave them empty and let the caller fall back to English.
 type AnalysisResult struct {
-	Issue    string
-	Cure     string
-	IssueBn  string
-	CureBn   string
-	Provider aiprovider.Name
+	Issue      string
+	Cure       string
+	Confidence string
+	Severity   string
+	Fertilizer string
+	IssueBn    string
+	CureBn     string
+	Provider   aiprovider.Name
 }
 
 // Provider abstracts the AI plant-diagnosis backend. Per the project's hard

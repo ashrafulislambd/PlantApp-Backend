@@ -15,13 +15,10 @@ services:
       GROQ_CHAT_MODEL: ${GROQ_CHAT_MODEL:-${GROQ_MODEL:-openai/gpt-oss-120b}}
       GROQ_VISION_MODEL: ${GROQ_VISION_MODEL:-qwen/qwen3.8-27b}
       MONGO_URI: ${MONGO_URI:-mongodb://mongo:27017}
-      MONGO_DB_NAME: ${MONGO_DB_NAME:-myplantpal}
+      MONGO_DB_NAME: ${MONGO_DB_NAME:-plantpal}
       JWT_SECRET: ${JWT_SECRET:-}
       JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
       JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-720h}
-    depends_on:
-      mongo:
-        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8081/health"]
       interval: 10s
@@ -29,6 +26,7 @@ services:
       retries: 3
     restart: unless-stopped
 
+  # Optional local Mongo, unused when MONGO_URI in .env points at an Atlas cluster.
   mongo:
     image: mongo:7-jammy
     ports:
