@@ -80,3 +80,43 @@ func (r *PlantRepository) Delete(ctx context.Context, id, userID string) error {
 	}
 	return nil
 }
+
+// Update replaces the stored plant. It is scoped by p.UserID, so a plant
+// owned by someone else reports apperr.ErrNotFound.
+func (r *PlantRepository) Update(ctx context.Context, p *plant.Plant) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	res, err := r.coll.ReplaceOne(ctx, bson.M{"_id": p.ID, "userId": p.UserID}, p)
+	if err != nil {
+		return err
+	}
+	if res.MatchedCount == 0 {
+		return apperr.ErrNotFound
+	}
+	return nil
+}
+
+// ListDue returns the user's plants whose next watering or fertilizing is
+// due at or before `before`, soonest watering first.
+func (r *PlantRepository) ListDue(ctx context.Context, userID string, before time.Time) ([]*plant.Plant, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	filter := bson.M{
+		"userId": userID,
+		"$or": bson.A{
+			bson.M{"nextWateringAt": bson.M{"$lte": before}},
+			bson.M{"nextFertilizingAt": bson.M{"$lte": before}},
+		},
+	}
+	cur, err := r.coll.Find(ctx, filter, options.Find().SetSort(bson.D{{Key: "nextWateringAt", Value: 1}}))
+	if err != nil {
+		return nil, err
+	}
+	defer cur.Close(ctx)
+
+	out := make([]*plant.Plant, 0)
+	if err := cur.All(ctx, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}

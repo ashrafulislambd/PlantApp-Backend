@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"plantpal-backend/internal/domain/apperr"
 	"plantpal-backend/internal/domain/product"
 )
 
@@ -23,16 +24,16 @@ const (
 )
 
 type cacheEntry struct {
-	result *product.RefreshResult
+	result   *product.RefreshResult
 	cachedAt time.Time
 }
 
 // PriceRefresher calls Groq Compound with a tightly scoped prompt and
 // caches results server-side for 6 hours per product.
 type PriceRefresher struct {
-	apiKey  string
-	client  *http.Client
-	cache   map[string]cacheEntry
+	apiKey string
+	client *http.Client
+	cache  map[string]cacheEntry
 }
 
 // New creates a PriceRefresher. apiKey is your Groq API key (from env).
@@ -99,6 +100,9 @@ func (r *PriceRefresher) RefreshPrice(p *product.Product) (*product.RefreshResul
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode == http.StatusTooManyRequests {
+		return nil, fmt.Errorf("groq: status 429: %w", apperr.ErrRateLimited)
+	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("groq: status %d", resp.StatusCode)
 	}

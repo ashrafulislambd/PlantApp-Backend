@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"plantpal-backend/internal/domain/apperr"
 	"plantpal-backend/internal/domain/aiprovider"
 	"plantpal-backend/internal/domain/chat"
 )
@@ -91,6 +92,9 @@ func (p *ChatProvider) Reply(ctx context.Context, history []*chat.Message, userM
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode == http.StatusTooManyRequests {
+		return chat.ReplyResult{}, fmt.Errorf("groq: status 429: %w", apperr.ErrRateLimited)
+	}
 	if resp.StatusCode != http.StatusOK {
 		return chat.ReplyResult{}, fmt.Errorf("groq: status %d", resp.StatusCode)
 	}

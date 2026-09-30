@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"plantpal-backend/internal/domain/apperr"
 	"plantpal-backend/internal/domain/aiprovider"
 	"plantpal-backend/internal/domain/diagnosis"
 )
@@ -131,6 +132,9 @@ func (p *DiagnosisProvider) Analyze(ctx context.Context, imageData []byte) (diag
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode == http.StatusTooManyRequests {
+		return diagnosis.AnalysisResult{}, fmt.Errorf("groq: status 429: %w", apperr.ErrRateLimited)
+	}
 	if resp.StatusCode != http.StatusOK {
 		return diagnosis.AnalysisResult{}, fmt.Errorf("groq: status %d", resp.StatusCode)
 	}
