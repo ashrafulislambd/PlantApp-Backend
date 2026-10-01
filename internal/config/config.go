@@ -39,6 +39,20 @@ JWTRefreshTTL time.Duration
 // serverClientId). Empty disables POST /api/v1/auth/google.
 GoogleClientIDs []string
 
+// GoogleClientSecret and GoogleRedirectURI are only needed for the
+// browser-based authorization-code flow (GET /auth/google/callback,
+// matching lib/features/auth/data/datasources/auth_remote_data_source.dart's
+// googleLogin()) - the server-side half of exchanging Google's `code` for
+// an ID token. GoogleClientSecret belongs to the SAME Web OAuth client as
+// GoogleClientIDs[0] (Google Cloud Console -> that client -> Client
+// secret). GoogleRedirectURI must exactly match AppConfig.googleRedirectUri
+// on the Flutter side AND the redirect URI registered on that OAuth
+// client in the Console - Google rejects the exchange otherwise. Either
+// empty disables these two routes (the ID-token-only path above still
+// works independently).
+GoogleClientSecret string
+GoogleRedirectURI  string
+
 // Diagnosis photo uploads.
 UploadDir      string
 MaxUploadBytes int64
@@ -81,7 +95,9 @@ JWTSecret:     os.Getenv("JWT_SECRET"),
 JWTAccessTTL:  getDuration("JWT_ACCESS_TTL", 15*time.Minute),
 JWTRefreshTTL: getDuration("JWT_REFRESH_TTL", 30*24*time.Hour),
 
-GoogleClientIDs: splitCSV(os.Getenv("GOOGLE_CLIENT_ID")),
+GoogleClientIDs:    splitCSV(os.Getenv("GOOGLE_CLIENT_ID")),
+GoogleClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
+GoogleRedirectURI:  os.Getenv("GOOGLE_REDIRECT_URI"),
 
 UploadDir:      getenv("UPLOAD_DIR", "uploads"),
 MaxUploadBytes: getInt64("MAX_UPLOAD_BYTES", 8<<20),

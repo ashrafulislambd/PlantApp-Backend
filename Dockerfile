@@ -14,5 +14,5 @@ RUN apk add --no-cache ca-certificates wget && \
 COPY --from=build /out/api /api
 ENV UPLOAD_DIR=/data/uploads
 USER appuser
-EXPOSE 8080
+EXPOSE 8133
 ENTRYPOINT ["/api"]

@@ -34,3 +34,7 @@ Thumbs.db
 *.bak
 
 uploads/
+
+# Scratch copies of VPS config (Caddyfile, etc.) kept locally for reference
+# only - never meant to be committed here, just copied onto the VPS by hand.
+deploy-temp/

@@ -183,9 +183,19 @@ MaxImageBytes:       cfg.MaxUploadBytes,
 RequireAuth:         authmw.RequireAuth(jwtIssuer),
 }
 
+var googleOAuthClientID string
+if len(cfg.GoogleClientIDs) > 0 {
+googleOAuthClientID = cfg.GoogleClientIDs[0]
+}
+googleOAuth := httpapi.GoogleOAuthConfig{
+ClientID:     googleOAuthClientID,
+ClientSecret: cfg.GoogleClientSecret,
+RedirectURI:  cfg.GoogleRedirectURI,
+}
+
 srv := &http.Server{
 Addr:    ":" + cfg.Port,
-Handler: httpapi.NewRouter(deps),
+Handler: httpapi.NewRouter(deps, googleOAuth),
 // Photo uploads from a phone on mobile data can be slow.
 ReadTimeout:  60 * time.Second,
 WriteTimeout: 60 * time.Second,
