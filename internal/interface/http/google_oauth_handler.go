@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"plantpal-backend/internal/domain/user"
 	authuc "plantpal-backend/internal/usecase/auth"
 )
 
@@ -92,8 +93,20 @@ func (h *googleOAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, appCallbackURI, http.StatusFound)
 		return
 	}
-	h.sessions.put(state, googleSessionResult{token: res.AccessToken})
+	h.sessions.put(state, googleSessionResult{result: res})
 	http.Redirect(w, r, appCallbackURI, http.StatusFound)
+}
+
+// sessionResponse mirrors v1's unexported authResponse (user_handler.go) -
+// {accessToken, refreshToken, user, expiresIn} - so the client can parse
+// this exactly like POST /api/v1/auth/login's response, rather than
+// decoding the JWT for profile info (it only carries the subject/user ID,
+// see security.JWTIssuer.NewAccessToken - no email or name claims).
+type sessionResponse struct {
+	User         *user.User `json:"user,omitempty"`
+	AccessToken  string     `json:"accessToken"`
+	RefreshToken string     `json:"refreshToken"`
+	ExpiresIn    int64      `json:"expiresIn"`
 }
 
 // Session handles GET /auth/google/session/{redirect}: the client calls
@@ -111,10 +124,15 @@ func (h *googleOAuthHandler) Session(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Flat shape (no {"data": ...} envelope) to match
-	// auth_remote_data_source.dart's googleLogin(), which reads
-	// res.data['token'] directly rather than res.data['data']['token'].
+	// auth_remote_data_source.dart's googleLogin(), which reads the body
+	// directly rather than unwrapping res.data['data'].
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]string{"token": result.token})
+	_ = json.NewEncoder(w).Encode(sessionResponse{
+		User:         result.result.User,
+		AccessToken:  result.result.AccessToken,
+		RefreshToken: result.result.RefreshToken,
+		ExpiresIn:    result.result.ExpiresIn,
+	})
 }
 
 func (h *googleOAuthHandler) exchangeCode(ctx context.Context, code string) (string, error) {
@@ -149,11 +167,11 @@ func (h *googleOAuthHandler) exchangeCode(ctx context.Context, code string) (str
 	return body.IDToken, nil
 }
 
-// googleSessionResult is what Callback hands off to Session: either an app
-// access token, or the error that should surface to the client instead.
+// googleSessionResult is what Callback hands off to Session: either a full
+// login result, or the error that should surface to the client instead.
 type googleSessionResult struct {
-	token string
-	err   error
+	result *authuc.AuthResult
+	err    error
 }
 
 type googleSessionEntry struct {
