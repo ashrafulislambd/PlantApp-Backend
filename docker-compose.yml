@@ -1,13 +1,32 @@
 services:
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      # Set ONLY in production's .env (never commit a real value here) -
+      # see Caddyfile's own header comment for why this must stay
+      # environment-driven rather than hardcoded.
+      CADDY_SITE_ADDRESS: ${CADDY_SITE_ADDRESS:-http://localhost}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Persist issued certs/ACME account state across container
+      # recreation - without this, every redeploy would re-request a fresh
+      # cert from Let's Encrypt, which is both slow and rate-limited.
+      - caddy_data:/data
+      - caddy_config:/config
+
   api:
     build:
       context: .
       dockerfile: Dockerfile
-    # No host port published - Caddy on the host (a separate, already-
-    # running compose project) reverse-proxies to this container directly
-    # over the shared `plantpal_proxy` external network (see bottom of this
-    # file) and terminates TLS there. See the generated Caddyfile for the
-    # matching `reverse_proxy api:8133` site block.
+    # No host port published - Caddy (above, same compose project now)
+    # reverse-proxies to this container over the default network and
+    # terminates TLS. See Caddyfile's `reverse_proxy api:8133`.
     expose:
       - "8133"
     env_file:
@@ -43,9 +62,6 @@ services:
       retries: 3
       start_period: 5s
     restart: unless-stopped
-    networks:
-      - default
-      - plantpal_proxy
 
   # Optional local Mongo, unused when MONGO_URI in .env points at an Atlas cluster.
   mongo:
@@ -65,12 +81,5 @@ services:
 volumes:
   mongo_data:
   uploads_data:
-
-# Shared with the ifingi-web-cloude compose project's `caddy` service, so
-# Caddy can reach this project's `api` container by service name even
-# though they're two separate compose projects (each gets its own isolated
-# default network otherwise). Create once on the VPS before first deploy:
-#   docker network create plantpal_proxy
-networks:
-  plantpal_proxy:
-    external: true
+  caddy_data:
+  caddy_config:

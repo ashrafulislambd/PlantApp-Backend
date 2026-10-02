@@ -1,0 +1,21 @@
+# CADDY_SITE_ADDRESS controls what Caddy actually serves - see
+# docker-compose.yml (the default lives there, not here - see its comment
+# for why), only ever overridden to the real domain in production's .env.
+# Locally this stays plain http://localhost - explicitly prefixed with
+# http:// so Caddy does NOT attempt automatic HTTPS/redirect for it at all.
+#
+# This split exists because Caddy's automatic-HTTPS behavior triggers on
+# ANY domain-looking site address the moment it's in a loaded Caddyfile -
+# it does not know or care whether it's running on the real production
+# host. Hardcoding the real domain here would make a LOCAL test run of
+# `docker compose up` immediately fire real Let's Encrypt ACME requests at
+# it - wasted attempts at best, and a real risk of tripping Let's
+# Encrypt's per-domain failure rate limit before the actual production
+# deploy ever gets a chance to request its own certificate. Never
+# hardcode the real domain here; always go through this variable.
+{$CADDY_SITE_ADDRESS} {
+	# Caddy's reverse_proxy sets X-Forwarded-Proto/-For/-Host automatically,
+	# so the Go app sees the real client scheme/IP even though the
+	# Caddy->api hop itself is plain HTTP.
+	reverse_proxy api:8133
+}
