@@ -17,6 +17,7 @@ import (
 	"plantpal-backend/internal/domain/aiprovider"
 	"plantpal-backend/internal/domain/chat"
 	"plantpal-backend/internal/domain/diagnosis"
+	"plantpal-backend/internal/infrastructure/ai/sse"
 )
 
 const (
@@ -27,9 +28,13 @@ const (
 // Client calls the Gemini API. apiKey is sent via the x-goog-api-key
 // header (not a query param).
 type Client struct {
-	apiKey string
-	model  string
-	http   *http.Client
+	apiKey  string
+	model   string
+	http    *http.Client
+	baseURL string
+	// streamHTTP has no overall Timeout (a streamed reply can outlast the
+	// 30s a normal call gets); the caller's context bounds the stream.
+	streamHTTP *http.Client
 }
 
 // New creates a Gemini client. An empty model falls back to
@@ -39,9 +44,11 @@ func New(apiKey, model string) *Client {
 		model = defaultModel
 	}
 	return &Client{
-		apiKey: apiKey,
-		model:  model,
-		http:   &http.Client{Timeout: 30 * time.Second},
+		apiKey:     apiKey,
+		model:      model,
+		http:       &http.Client{Timeout: 30 * time.Second},
+		baseURL:    apiBase,
+		streamHTTP: &http.Client{},
 	}
 }
 
@@ -109,7 +116,13 @@ func roleToGemini(r chat.Role) string {
 }
 
 func (c *Client) endpoint() string {
-	return fmt.Sprintf("%s/%s:generateContent", apiBase, c.model)
+	return fmt.Sprintf("%s/%s:generateContent", c.baseURL, c.model)
+}
+
+// streamEndpoint is the SSE variant: alt=sse makes Gemini send each partial
+// response as a "data: {json}" event instead of one JSON array.
+func (c *Client) streamEndpoint() string {
+	return fmt.Sprintf("%s/%s:streamGenerateContent?alt=sse", c.baseURL, c.model)
 }
 
 // do sends a generateContent request and returns the concatenated text of
@@ -160,8 +173,8 @@ func (c *Client) do(ctx context.Context, req geminiRequest) (string, error) {
 	return text, nil
 }
 
-// Reply implements chat.ReplyProvider.
-func (c *Client) Reply(ctx context.Context, history []*chat.Message, userMessage string, lang string) (chat.ReplyResult, error) {
+// chatRequest assembles the conversation, prior turns and system prompt.
+func chatRequest(history []*chat.Message, userMessage, lang string) geminiRequest {
 	contents := make([]geminiContent, 0, len(history)+1)
 	for _, m := range history {
 		contents = append(contents, geminiContent{
@@ -178,14 +191,78 @@ func (c *Client) Reply(ctx context.Context, history []*chat.Message, userMessage
 	if lang == "bn" {
 		systemPrompt += " You MUST answer the user in Bengali (বাংলা). All advice, plant care tips, and explanations must be written in natural, fluent Bengali."
 	}
-	text, err := c.do(ctx, geminiRequest{
+	return geminiRequest{
 		Contents:          contents,
 		SystemInstruction: &geminiSystemInstruction{Parts: []geminiPart{{Text: systemPrompt}}},
-	})
+	}
+}
+
+// Reply implements chat.ReplyProvider.
+func (c *Client) Reply(ctx context.Context, history []*chat.Message, userMessage string, lang string) (chat.ReplyResult, error) {
+	text, err := c.do(ctx, chatRequest(history, userMessage, lang))
 	if err != nil {
 		return chat.ReplyResult{}, err
 	}
 	return chat.ReplyResult{Text: text, Provider: aiprovider.Gemini}, nil
+}
+
+// ReplyStream implements chat.StreamProvider via streamGenerateContent with
+// alt=sse. Each partial candidate's text is passed to onDelta immediately.
+func (c *Client) ReplyStream(ctx context.Context, history []*chat.Message, userMessage string, lang string, onDelta func(string) error) (chat.ReplyResult, error) {
+	body, err := json.Marshal(chatRequest(history, userMessage, lang))
+	if err != nil {
+		return chat.ReplyResult{}, fmt.Errorf("gemini: marshal request: %w", err)
+	}
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, c.streamEndpoint(), bytes.NewReader(body))
+	if err != nil {
+		return chat.ReplyResult{}, fmt.Errorf("gemini: build request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Accept", "text/event-stream")
+	httpReq.Header.Set("x-goog-api-key", c.apiKey)
+
+	resp, err := c.streamHTTP.Do(httpReq)
+	if err != nil {
+		return chat.ReplyResult{}, fmt.Errorf("gemini: http: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusTooManyRequests {
+		return chat.ReplyResult{}, fmt.Errorf("gemini: status 429: %w", apperr.ErrRateLimited)
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return chat.ReplyResult{}, fmt.Errorf("gemini: status %d", resp.StatusCode)
+	}
+
+	var sb strings.Builder
+	result := func() chat.ReplyResult {
+		return chat.ReplyResult{Text: sb.String(), Provider: aiprovider.Gemini}
+	}
+	err = sse.Read(resp.Body, func(data string) error {
+		var gr geminiResponse
+		if err := json.Unmarshal([]byte(data), &gr); err != nil {
+			return fmt.Errorf("gemini: decode stream chunk: %w", err)
+		}
+		if len(gr.Candidates) == 0 {
+			return nil
+		}
+		var piece strings.Builder
+		for _, p := range gr.Candidates[0].Content.Parts {
+			piece.WriteString(p.Text)
+		}
+		if piece.Len() == 0 {
+			return nil
+		}
+		sb.WriteString(piece.String())
+		return onDelta(piece.String())
+	})
+	if err != nil {
+		return result(), fmt.Errorf("gemini: stream: %w", err)
+	}
+	if strings.TrimSpace(sb.String()) == "" {
+		return chat.ReplyResult{}, fmt.Errorf("gemini: empty response text")
+	}
+	return result(), nil
 }
 
 type diagnosisJSON struct {
@@ -199,7 +276,7 @@ type diagnosisJSON struct {
 }
 
 // Analyze implements diagnosis.Provider.
-func (c *Client) Analyze(ctx context.Context, imageData []byte) (diagnosis.AnalysisResult, error) {
+func (c *Client) Analyze(ctx context.Context, imageData []byte, note string) (diagnosis.AnalysisResult, error) {
 	mimeType := http.DetectContentType(imageData)
 	encoded := base64.StdEncoding.EncodeToString(imageData)
 
@@ -208,7 +285,7 @@ func (c *Client) Analyze(ctx context.Context, imageData []byte) (diagnosis.Analy
 			{
 				Role: "user",
 				Parts: []geminiPart{
-					{Text: diagnosisPrompt},
+					{Text: diagnosisPrompt + diagnosis.NoteHint(note)},
 					{InlineData: &geminiInlineData{MimeType: mimeType, Data: encoded}},
 				},
 			},

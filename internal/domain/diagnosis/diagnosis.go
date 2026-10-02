@@ -1,6 +1,10 @@
 package diagnosis
 
-import "time"
+import (
+	"fmt"
+	"strings"
+	"time"
+)
 
 // Disclaimer is always attached to a Diagnosis. Per project convention, AI
 // Doctor results are assistance, never a guaranteed diagnosis.
@@ -48,4 +52,32 @@ func (d Diagnosis) Localized(lang string) Diagnosis {
 	d.Cure = d.CureBn
 	d.Disclaimer = d.DisclaimerBn
 	return d
+}
+
+// PromptText renders the scan as one bracketed line a language model can
+// read, e.g. "[Scan result: issue ...; cure ...]". Always English, whatever
+// the user's language, so the model sees consistent field names.
+func (d Diagnosis) PromptText() string {
+	parts := []string{"issue " + d.Issue, "cure " + d.Cure}
+	if d.Severity != "" {
+		parts = append(parts, "severity "+d.Severity)
+	}
+	if d.Confidence != "" {
+		parts = append(parts, "confidence "+d.Confidence)
+	}
+	if d.Fertilizer != "" {
+		parts = append(parts, "fertilizer "+d.Fertilizer)
+	}
+	return "[Scan result: " + strings.Join(parts, "; ") + "]"
+}
+
+// ChatSummary is the short assistant message saved in a chat session when a
+// photo is scanned from the chat, in the user's language (Bengali when lang
+// is "bn" and a translation exists). Markdown, like every assistant reply.
+func (d Diagnosis) ChatSummary(lang string) string {
+	l := d.Localized(lang)
+	if lang == "bn" && d.IssueBn != "" {
+		return fmt.Sprintf("আপনার ছবিটি বিশ্লেষণ করেছি।\n\n**সমস্যা:** %s\n\n**প্রস্তাবিত চিকিৎসা:** %s", l.Issue, l.Cure)
+	}
+	return fmt.Sprintf("I analysed your photo.\n\n**Issue:** %s\n\n**Suggested treatment:** %s", l.Issue, l.Cure)
 }

@@ -314,6 +314,74 @@ paths:
         "400":
           $ref: "#/components/responses/BadRequest"
 
+  /api/v1/chat/messages/stream:
+    post:
+      tags: [Chat]
+      summary: Send a message and stream the assistant reply (Server-Sent Events)
+      description: |
+        Same contract as `POST /chat/messages`, but the reply is delivered as
+        `text/event-stream` while it is generated. Events, in order:
+
+        - `start` — `{"userMessage": ChatMessage, "assistantId": "msg_..."}`
+        - `delta` — `{"text": "..."}` (repeated; append to the reply)
+        - `done` — `{"message": ChatMessage}` (the stored, complete reply)
+        - `error` — `{"code": "rate_limited|interrupted|canceled", "error": "...", "message": ChatMessage?}`;
+          `message` is the partial reply, which is stored.
+
+        Failures before the first `delta` (validation, rate limit, all
+        providers down) are ordinary JSON errors with a real status code.
+        Closing the connection stops generation; the partial reply is kept.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendChatRequest"
+      responses:
+        "200":
+          description: Event stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          description: AI provider rate limit reached (Retry-After header set)
+
+  /api/v1/chat/sessions:
+    get:
+      tags: [Chat]
+      summary: List the user's chat sessions, most recent first
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ChatSession"
+
+  /api/v1/chat/sessions/{id}:
+    delete:
+      tags: [Chat]
+      summary: Delete a chat session and all of its messages
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+
 components:
   parameters:
     PlantId:
@@ -477,6 +545,21 @@ components:
         imageBase64:
           type: string
           description: Base64-encoded photo bytes.
+        sessionId:
+          type: string
+          description: |
+            Optional. A chat session id. When present, the scan is also
+            recorded in that session as two turns: the user's photo (with
+            `note`) and a short assistant summary of the result, localized by
+            Accept-Language. The photo and Diagnosis are stored once; both
+            turns just reference them via `diagnosisId`.
+        note:
+          type: string
+          maxLength: 500
+          description: |
+            Optional caption. Passed to the vision model as a hint (never as
+            instructions) and saved as the user's chat turn when `sessionId`
+            is set.
 
     ChatMessage:
       type: object
@@ -499,6 +582,34 @@ components:
           nullable: true
           enum: [gemini, groq, mock]
           description: Which AI backend produced this reply (assistant messages only).
+        diagnosisId:
+          type: string
+          nullable: true
+          description: |
+            The saved scan this turn belongs to: the user turn that carried a
+            photo, the assistant turn that summarised it, or a user turn sent
+            with a scan as context.
+        imageUrl:
+          type: string
+          nullable: true
+          description: |
+            `/api/v1/diagnoses/{diagnosisId}/image`, present when diagnosisId
+            is. Needs the Bearer token, so clients must fetch it with their
+            API client (a plain image widget cannot).
+
+    ChatSession:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+          description: The session's first user message, trimmed to 40 characters.
+        lastMessageAt:
+          type: string
+          format: date-time
+        messageCount:
+          type: integer
 
     SendChatRequest:
       type: object
@@ -508,3 +619,10 @@ components:
           type: string
         content:
           type: string
+        diagnosisId:
+          type: string
+          description: |
+            Optional. One of the caller's own saved scans, attached as
+            context: stored on the user turn and described to the model (the
+            first time it is mentioned in the session). Another user's or an
+            unknown id is rejected with 400.

@@ -49,7 +49,7 @@ func NewMockDiagnosisProvider() *MockDiagnosisProvider {
 	return &MockDiagnosisProvider{}
 }
 
-func (p *MockDiagnosisProvider) Analyze(_ context.Context, _ []byte) (diagnosis.AnalysisResult, error) {
+func (p *MockDiagnosisProvider) Analyze(_ context.Context, _ []byte, _ string) (diagnosis.AnalysisResult, error) {
 	i := p.counter.Add(1) - 1
 	return mockDiagnoses[int(i)%len(mockDiagnoses)], nil
 }

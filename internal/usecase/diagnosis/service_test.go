@@ -16,7 +16,7 @@ type stubProvider struct {
 	err    error
 }
 
-func (p stubProvider) Analyze(_ context.Context, _ []byte) (diagnosis.AnalysisResult, error) {
+func (p stubProvider) Analyze(_ context.Context, _ []byte, _ string) (diagnosis.AnalysisResult, error) {
 	return p.result, p.err
 }
 
@@ -98,5 +98,74 @@ func TestList_FiltersByPlantID(t *testing.T) {
 	}
 	if len(list) != 1 {
 		t.Errorf("List(plantA) returned %d diagnoses, want 1", len(list))
+	}
+}
+
+// --- chat session + note -------------------------------------------------
+
+type noteStub struct{ gotNote string }
+
+func (p *noteStub) Analyze(_ context.Context, _ []byte, note string) (diagnosis.AnalysisResult, error) {
+	p.gotNote = note
+	return diagnosis.AnalysisResult{Issue: "Leaf spot", Cure: "Prune"}, nil
+}
+
+type recorderStub struct {
+	calls     int
+	sessionID string
+	note      string
+	diagID    string
+	err       error
+}
+
+func (r *recorderStub) RecordScan(_ context.Context, _, sessionID, note string, d *diagnosis.Diagnosis, _ string) error {
+	r.calls++
+	r.sessionID, r.note, r.diagID = sessionID, note, d.ID
+	return r.err
+}
+
+func TestAnalyze_PassesNoteToProviderAndRecordsInChatOnce(t *testing.T) {
+	p := &noteStub{}
+	rec := &recorderStub{}
+	repo := memory.NewDiagnosisRepository()
+	svc := NewService(repo, p, idgen.New())
+	svc.SetChatRecorder(rec)
+
+	d, err := svc.Analyze(context.Background(), AnalyzeInput{
+		UserID: "u1", ImageData: []byte{1}, SessionID: " s1 ", Note: "  white spots  ", Lang: "en",
+	})
+	if err != nil {
+		t.Fatalf("Analyze() error = %v", err)
+	}
+	if p.gotNote != "white spots" {
+		t.Errorf("provider note = %q, want trimmed note", p.gotNote)
+	}
+	if rec.calls != 1 || rec.sessionID != "s1" || rec.note != "white spots" || rec.diagID != d.ID {
+		t.Errorf("recorder = %+v, want one call for this diagnosis", rec)
+	}
+	if all, _ := repo.List(context.Background(), "u1", nil); len(all) != 1 {
+		t.Errorf("%d diagnoses stored, want exactly 1", len(all))
+	}
+}
+
+func TestAnalyze_NoSessionMeansNoChatRecording(t *testing.T) {
+	rec := &recorderStub{}
+	svc := NewService(memory.NewDiagnosisRepository(), &noteStub{}, idgen.New())
+	svc.SetChatRecorder(rec)
+	if _, err := svc.Analyze(context.Background(), AnalyzeInput{UserID: "u1", ImageData: []byte{1}}); err != nil {
+		t.Fatal(err)
+	}
+	if rec.calls != 0 {
+		t.Errorf("recorder called %d times without a sessionId", rec.calls)
+	}
+}
+
+func TestAnalyze_ChatRecordingFailureDoesNotLoseTheDiagnosis(t *testing.T) {
+	rec := &recorderStub{err: errors.New("db down")}
+	svc := NewService(memory.NewDiagnosisRepository(), &noteStub{}, idgen.New())
+	svc.SetChatRecorder(rec)
+	d, err := svc.Analyze(context.Background(), AnalyzeInput{UserID: "u1", ImageData: []byte{1}, SessionID: "s1"})
+	if err != nil || d == nil {
+		t.Fatalf("Analyze() = %v, %v; want the diagnosis despite the recorder failing", d, err)
 	}
 }

@@ -12,6 +12,7 @@ import (
 	"plantpal-backend/internal/domain/apperr"
 	"plantpal-backend/internal/domain/aiprovider"
 	"plantpal-backend/internal/domain/chat"
+	"plantpal-backend/internal/infrastructure/ai/sse"
 )
 
 const (
@@ -26,9 +27,14 @@ const chatSystemPrompt = "You are the AI Doctor's chat assistant inside the Plan
 // OpenAI-compatible chat completions API. Same call style as the existing
 // price-refresher in this package.
 type ChatProvider struct {
-	apiKey string
-	model  string
-	http   *http.Client
+	apiKey   string
+	model    string
+	http     *http.Client
+	endpoint string
+	// streamHTTP has no overall Timeout: a streamed reply can legitimately
+	// take longer than the 30s a normal call is allowed. The caller's
+	// context bounds the stream instead.
+	streamHTTP *http.Client
 }
 
 // NewChatProvider creates a Groq chat provider. An empty model falls back
@@ -38,9 +44,11 @@ func NewChatProvider(apiKey, model string) *ChatProvider {
 		model = defaultChatModel
 	}
 	return &ChatProvider{
-		apiKey: apiKey,
-		model:  model,
-		http:   &http.Client{Timeout: 30 * time.Second},
+		apiKey:     apiKey,
+		model:      model,
+		http:       &http.Client{Timeout: 30 * time.Second},
+		endpoint:   chatCompletionsEndpoint,
+		streamHTTP: &http.Client{},
 	}
 }
 
@@ -52,6 +60,16 @@ type chatCompletionMessage struct {
 type chatCompletionRequest struct {
 	Model    string                  `json:"model"`
 	Messages []chatCompletionMessage `json:"messages"`
+	Stream   bool                    `json:"stream,omitempty"`
+}
+
+// chatCompletionChunk is one SSE event of a streamed completion.
+type chatCompletionChunk struct {
+	Choices []struct {
+		Delta struct {
+			Content string `json:"content"`
+		} `json:"delta"`
+	} `json:"choices"`
 }
 
 type chatCompletionResponse struct {
@@ -60,9 +78,10 @@ type chatCompletionResponse struct {
 	} `json:"choices"`
 }
 
-// Reply implements chat.ReplyProvider. Domain roles ("user"/"assistant")
-// match Groq's OpenAI-compatible roles directly — no remapping needed.
-func (p *ChatProvider) Reply(ctx context.Context, history []*chat.Message, userMessage string, lang string) (chat.ReplyResult, error) {
+// buildMessages assembles the system prompt, prior turns and the new user
+// message in the OpenAI-compatible shape. Domain roles ("user"/"assistant")
+// match Groq's roles directly, so no remapping is needed.
+func buildMessages(history []*chat.Message, userMessage, lang string) []chatCompletionMessage {
 	systemPrompt := chatSystemPrompt
 	if lang == "bn" {
 		systemPrompt += " You MUST answer the user in Bengali (বাংলা). All advice, plant care tips, and explanations must be written in natural, fluent Bengali."
@@ -72,14 +91,19 @@ func (p *ChatProvider) Reply(ctx context.Context, history []*chat.Message, userM
 	for _, m := range history {
 		messages = append(messages, chatCompletionMessage{Role: string(m.Role), Content: m.Content})
 	}
-	messages = append(messages, chatCompletionMessage{Role: "user", Content: userMessage})
+	return append(messages, chatCompletionMessage{Role: "user", Content: userMessage})
+}
+
+// Reply implements chat.ReplyProvider.
+func (p *ChatProvider) Reply(ctx context.Context, history []*chat.Message, userMessage string, lang string) (chat.ReplyResult, error) {
+	messages := buildMessages(history, userMessage, lang)
 
 	body, err := json.Marshal(chatCompletionRequest{Model: p.model, Messages: messages})
 	if err != nil {
 		return chat.ReplyResult{}, fmt.Errorf("groq: marshal request: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, chatCompletionsEndpoint, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.endpoint, bytes.NewReader(body))
 	if err != nil {
 		return chat.ReplyResult{}, fmt.Errorf("groq: build request: %w", err)
 	}
@@ -112,4 +136,65 @@ func (p *ChatProvider) Reply(ctx context.Context, history []*chat.Message, userM
 		return chat.ReplyResult{}, fmt.Errorf("groq: empty response text")
 	}
 	return chat.ReplyResult{Text: text, Provider: aiprovider.Groq}, nil
+}
+
+// ReplyStream implements chat.StreamProvider using Groq's SSE streaming
+// (stream:true). Each non-empty delta is passed to onDelta immediately.
+func (p *ChatProvider) ReplyStream(ctx context.Context, history []*chat.Message, userMessage string, lang string, onDelta func(string) error) (chat.ReplyResult, error) {
+	body, err := json.Marshal(chatCompletionRequest{
+		Model:    p.model,
+		Messages: buildMessages(history, userMessage, lang),
+		Stream:   true,
+	})
+	if err != nil {
+		return chat.ReplyResult{}, fmt.Errorf("groq: marshal request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.endpoint, bytes.NewReader(body))
+	if err != nil {
+		return chat.ReplyResult{}, fmt.Errorf("groq: build request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+p.apiKey)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "text/event-stream")
+
+	resp, err := p.streamHTTP.Do(req)
+	if err != nil {
+		return chat.ReplyResult{}, fmt.Errorf("groq: http: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusTooManyRequests {
+		return chat.ReplyResult{}, fmt.Errorf("groq: status 429: %w", apperr.ErrRateLimited)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return chat.ReplyResult{}, fmt.Errorf("groq: status %d", resp.StatusCode)
+	}
+
+	var sb strings.Builder
+	result := func() chat.ReplyResult {
+		return chat.ReplyResult{Text: sb.String(), Provider: aiprovider.Groq}
+	}
+	err = sse.Read(resp.Body, func(data string) error {
+		if strings.TrimSpace(data) == "[DONE]" {
+			return sse.ErrStop
+		}
+		var chunk chatCompletionChunk
+		if err := json.Unmarshal([]byte(data), &chunk); err != nil {
+			return fmt.Errorf("groq: decode stream chunk: %w", err)
+		}
+		if len(chunk.Choices) == 0 || chunk.Choices[0].Delta.Content == "" {
+			return nil
+		}
+		piece := chunk.Choices[0].Delta.Content
+		sb.WriteString(piece)
+		return onDelta(piece)
+	})
+	if err != nil {
+		return result(), fmt.Errorf("groq: stream: %w", err)
+	}
+	if strings.TrimSpace(sb.String()) == "" {
+		return chat.ReplyResult{}, fmt.Errorf("groq: empty response text")
+	}
+	return result(), nil
 }

@@ -74,6 +74,9 @@ mux.HandleFunc("DELETE "+basePath+"/devices", deps.RequireAuth(deviceH.Unregiste
 chatH := NewChatHandler(deps.ChatService)
 mux.HandleFunc("POST "+basePath+"/chat/messages", deps.RequireAuth(chatH.Send))
 mux.HandleFunc("GET "+basePath+"/chat/messages", deps.RequireAuth(chatH.List))
+mux.HandleFunc("POST "+basePath+"/chat/messages/stream", deps.RequireAuth(chatH.Stream))
+mux.HandleFunc("GET "+basePath+"/chat/sessions", deps.RequireAuth(chatH.Sessions))
+mux.HandleFunc("DELETE "+basePath+"/chat/sessions/{id}", deps.RequireAuth(chatH.DeleteSession))
 
 prodH := NewProductHandler(deps.ProductService)
 mux.HandleFunc("GET "+basePath+"/products", deps.RequireAuth(prodH.List))

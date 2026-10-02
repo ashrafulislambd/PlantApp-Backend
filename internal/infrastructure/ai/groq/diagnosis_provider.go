@@ -98,7 +98,7 @@ type diagnosisJSON struct {
 // Analyze implements diagnosis.Provider. Groq accepts base64 images inline
 // (not just hosted URLs) via a data: URL. Note: the base64 request-size cap
 // is 4MB vs 20MB for hosted URLs — not enforced here.
-func (p *DiagnosisProvider) Analyze(ctx context.Context, imageData []byte) (diagnosis.AnalysisResult, error) {
+func (p *DiagnosisProvider) Analyze(ctx context.Context, imageData []byte, note string) (diagnosis.AnalysisResult, error) {
 	mimeType := http.DetectContentType(imageData)
 	dataURL := fmt.Sprintf("data:%s;base64,%s", mimeType, base64.StdEncoding.EncodeToString(imageData))
 
@@ -108,7 +108,7 @@ func (p *DiagnosisProvider) Analyze(ctx context.Context, imageData []byte) (diag
 			{
 				Role: "user",
 				Content: []visionContentPart{
-					{Type: "text", Text: diagnosisPrompt},
+					{Type: "text", Text: diagnosisPrompt + diagnosis.NoteHint(note)},
 					{Type: "image_url", ImageURL: &visionImageURL{URL: dataURL}},
 				},
 			},

@@ -5,18 +5,28 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"strings"
 	"time"
+	"unicode/utf8"
 
 	"plantpal-backend/internal/domain/apperr"
 	"plantpal-backend/internal/domain/diagnosis"
 	"plantpal-backend/internal/idgen"
 )
 
+// ChatRecorder saves a scan as two turns of a chat session. It is
+// implemented by the chat usecase; declared here so this package does not
+// depend on it.
+type ChatRecorder interface {
+	RecordScan(ctx context.Context, userID, sessionID, note string, d *diagnosis.Diagnosis, lang string) error
+}
+
 type Service struct {
 	repo     diagnosis.Repository
 	provider diagnosis.Provider
 	ids      idgen.Generator
 	images   diagnosis.ImageStore // optional; nil means photos are not kept
+	chat     ChatRecorder         // optional; nil means scans never reach chat history
 }
 
 func NewService(repo diagnosis.Repository, provider diagnosis.Provider, ids idgen.Generator) *Service {
@@ -26,12 +36,28 @@ func NewService(repo diagnosis.Repository, provider diagnosis.Provider, ids idge
 // SetImageStore turns on saving the submitted photo alongside the Diagnosis.
 func (s *Service) SetImageStore(store diagnosis.ImageStore) { s.images = store }
 
+// SetChatRecorder lets a scan sent from the chat (AnalyzeInput.SessionID) be
+// recorded in that chat session.
+func (s *Service) SetChatRecorder(r ChatRecorder) { s.chat = r }
+
 type AnalyzeInput struct {
 	UserID      string
 	PlantID     *string
 	ImageData   []byte
 	ContentType string // image/jpeg, image/png or image/webp
+
+	// Note is the user's optional caption. It is passed to the vision model
+	// as a hint and, with SessionID, saved as the user's chat turn.
+	Note string
+	// SessionID, when set, also saves this scan as two turns (the user's
+	// photo + note, and a short assistant summary) in that chat session.
+	SessionID string
+	// Lang ("en"/"bn") picks the language of the saved assistant summary.
+	Lang string
 }
+
+// maxSessionIDLen guards the chat session id taken from a request.
+const maxSessionIDLen = 128
 
 var imageExt = map[string]string{
 	"image/jpeg": ".jpg",
@@ -47,7 +73,16 @@ func (s *Service) Analyze(ctx context.Context, in AnalyzeInput) (*diagnosis.Diag
 		return nil, fmt.Errorf("%w: userID is required", apperr.ErrInvalidInput)
 	}
 
-	result, err := s.provider.Analyze(ctx, in.ImageData)
+	note := strings.TrimSpace(in.Note)
+	if utf8.RuneCountInString(note) > diagnosis.MaxNoteRunes {
+		note = string([]rune(note)[:diagnosis.MaxNoteRunes])
+	}
+	sessionID := strings.TrimSpace(in.SessionID)
+	if len(sessionID) > maxSessionIDLen {
+		return nil, fmt.Errorf("%w: sessionId is too long", apperr.ErrInvalidInput)
+	}
+
+	result, err := s.provider.Analyze(ctx, in.ImageData, note)
 	if err != nil {
 		return nil, err
 	}
@@ -88,6 +123,16 @@ func (s *Service) Analyze(ctx context.Context, in AnalyzeInput) (*diagnosis.Diag
 			}
 		}
 		return nil, err
+	}
+
+	// The photo and the Diagnosis are saved exactly once, above. Recording
+	// the chat turns only adds references to them (DiagnosisID). A failure
+	// here must not discard a result the user already waited for, so it is
+	// logged and the diagnosis is still returned.
+	if sessionID != "" && s.chat != nil {
+		if err := s.chat.RecordScan(ctx, in.UserID, sessionID, note, d, in.Lang); err != nil {
+			log.Printf("diagnosis: recording scan %s in chat session failed: %v", d.ID, err)
+		}
 	}
 	return d, nil
 }

@@ -160,6 +160,13 @@ if err != nil {
 log.Fatalf("upload dir: %v", err)
 }
 diagnosisService.SetImageStore(imageStore)
+
+// Chat and scans know about each other through small ports: a scan sent
+// from the chat is recorded in the chat session, and a message may carry a
+// scan (user-scoped lookup) that later turns remember.
+chatService := chatuc.NewService(chatRepo, chatReplyProvider, ids)
+chatService.SetScanLookup(diagnosisRepo)
+diagnosisService.SetChatRecorder(chatService)
 log.Printf("Diagnosis photos: saved to %s (max %d bytes)", cfg.UploadDir, cfg.MaxUploadBytes)
 
 notificationService := notificationuc.NewService(notificationRepo, buildPushSender(cfg), plantRepo)
@@ -174,7 +181,7 @@ deps := v1.Dependencies{
 PlantService:        plantuc.NewService(plantRepo, ids),
 FertilizerService:   fertilizeruc.NewService(fertilizerRepo, ids),
 DiagnosisService:    diagnosisService,
-ChatService:         chatuc.NewService(chatRepo, chatReplyProvider, ids),
+ChatService:         chatService,
 ProductService:      productuc.NewService(productRepo, priceRefresher),
 OrderService:        orderuc.NewService(orderRepo, productRepo, ids),
 AuthService:         authService,
