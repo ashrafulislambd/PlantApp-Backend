@@ -95,6 +95,22 @@ func (r *UserRepository) LinkGoogle(ctx context.Context, id, googleID string) er
 	return nil
 }
 
+func (r *UserRepository) UpdatePasswordHash(ctx context.Context, id, passwordHash string) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	res, err := r.coll.UpdateOne(ctx,
+		bson.M{"_id": id},
+		bson.M{"$set": bson.M{"passwordHash": passwordHash, "updatedAt": time.Now().UTC()}},
+	)
+	if err != nil {
+		return err
+	}
+	if res.MatchedCount == 0 {
+		return apperr.ErrNotFound
+	}
+	return nil
+}
+
 func (r *UserRepository) GetByID(ctx context.Context, id string) (*user.User, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
