@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"plantpal-backend/internal/domain/apperr"
@@ -24,10 +25,16 @@ type Service struct {
 	jwt        *security.JWTIssuer
 	refreshTTL time.Duration
 	google     GoogleVerifier // nil = Google sign-in disabled
+
+	resetMu    sync.Mutex
+	resetCodes map[string]resetCode // keyed by normalized email
 }
 
 func NewService(users user.Repository, tokens refreshtoken.Repository, ids idgen.Generator, jwtIssuer *security.JWTIssuer, refreshTTL time.Duration) *Service {
-	return &Service{users: users, tokens: tokens, ids: ids, jwt: jwtIssuer, refreshTTL: refreshTTL}
+	return &Service{
+		users: users, tokens: tokens, ids: ids, jwt: jwtIssuer, refreshTTL: refreshTTL,
+		resetCodes: map[string]resetCode{},
+	}
 }
 
 type AuthResult struct {

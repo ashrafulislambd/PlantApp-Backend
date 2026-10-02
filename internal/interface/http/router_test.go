@@ -53,7 +53,7 @@ func newTestRouter() http.Handler {
 		RequireAuth:       noAuth,
 	}
 
-	return httpapi.NewRouter(deps)
+	return httpapi.NewRouter(deps, httpapi.GoogleOAuthConfig{})
 }
 
 type apiEnvelope struct {
