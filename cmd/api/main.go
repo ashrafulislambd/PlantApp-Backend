@@ -1,4 +1,4 @@
-// Command api runs the PlantPal HTTP API.
+﻿// Command api runs the PlantPal HTTP API.
 package main
 
 import (
@@ -177,8 +177,20 @@ log.Printf("Care reminders: checking every %s", cfg.ReminderInterval)
 log.Println("Care reminders: disabled (REMINDER_INTERVAL=0)")
 }
 
+plantService := plantuc.NewService(plantRepo, ids)
+plantService.SetImageStore(imageStore)
+
+// Build identifier chain (Gemini first, mock fallback)
+var identifierEntries []ai.IdentifierProviderEntry
+if cfg.GeminiAPIKey != "" {
+geminiClient := gemini.New(cfg.GeminiAPIKey, cfg.GeminiModel)
+identifierEntries = append(identifierEntries, ai.IdentifierProviderEntry{Name: "gemini", Provider: geminiClient})
+}
+identifierEntries = append(identifierEntries, ai.IdentifierProviderEntry{Name: "mock", Provider: ai.NewMockPlantIdentifier(), Placeholder: true})
+plantService.SetIdentifier(ai.NewFallbackPlantIdentifier(identifierEntries...))
+
 deps := v1.Dependencies{
-PlantService:        plantuc.NewService(plantRepo, ids),
+PlantService:        plantService,
 FertilizerService:   fertilizeruc.NewService(fertilizerRepo, ids),
 DiagnosisService:    diagnosisService,
 ChatService:         chatService,

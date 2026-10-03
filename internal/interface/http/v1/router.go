@@ -1,4 +1,4 @@
-// Package v1 is the first version of the HTTP API surface, mounted under
+﻿// Package v1 is the first version of the HTTP API surface, mounted under
 // /api/v1. A future breaking change gets its own v2 package mounted
 // alongside it, so both can be served at once during a migration.
 package v1
@@ -38,7 +38,10 @@ const basePath = "/api/v1"
 func RegisterRoutes(mux *http.ServeMux, deps Dependencies) {
 mux.HandleFunc("GET "+basePath+"/health", HealthCheck)
 
-plantH := NewPlantHandler(deps.PlantService)
+plantH := NewPlantHandler(deps.PlantService, deps.MaxImageBytes)
+mux.HandleFunc("POST "+basePath+"/plants/identify", deps.RequireAuth(plantH.Identify))
+mux.HandleFunc("GET "+basePath+"/plants/{id}/image", deps.RequireAuth(plantH.Image))
+mux.HandleFunc("POST "+basePath+"/plants/{id}/image", deps.RequireAuth(plantH.UploadImage))
 mux.HandleFunc("POST "+basePath+"/plants", deps.RequireAuth(plantH.Create))
 mux.HandleFunc("GET "+basePath+"/plants", deps.RequireAuth(plantH.List))
 mux.HandleFunc("GET "+basePath+"/plants/due", deps.RequireAuth(plantH.Due))
@@ -54,6 +57,8 @@ mux.HandleFunc("POST "+basePath+"/auth/login", authH.Login)
 mux.HandleFunc("POST "+basePath+"/auth/google", authH.Google)
 mux.HandleFunc("POST "+basePath+"/auth/refresh", authH.Refresh)
 mux.HandleFunc("POST "+basePath+"/auth/logout", authH.Logout)
+mux.HandleFunc("POST "+basePath+"/auth/forgot-password", authH.ForgotPassword)
+mux.HandleFunc("POST "+basePath+"/auth/reset-password", authH.ResetPassword)
 mux.HandleFunc("GET "+basePath+"/auth/me", deps.RequireAuth(authH.Me))
 
 fertH := NewFertilizerHandler(deps.FertilizerService)

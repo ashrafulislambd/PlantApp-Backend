@@ -1,4 +1,4 @@
-// Package gemini implements chat.ReplyProvider and diagnosis.Provider using
+﻿// Package gemini implements chat.ReplyProvider and diagnosis.Provider using
 // Google's Gemini generateContent API, called directly over HTTP to keep
 // the backend free of external dependencies.
 package gemini
@@ -17,6 +17,7 @@ import (
 	"plantpal-backend/internal/domain/aiprovider"
 	"plantpal-backend/internal/domain/chat"
 	"plantpal-backend/internal/domain/diagnosis"
+	"plantpal-backend/internal/domain/plant"
 	"plantpal-backend/internal/infrastructure/ai/sse"
 )
 
@@ -101,8 +102,8 @@ Reply ONLY as valid JSON with exactly these keys:
   "confidence": "High|Moderate|Low",
   "severity": "Mild|Moderate|Severe",
   "fertilizer": "<a short fertilizer or nutrient suggestion, or empty string if not applicable>",
-  "issueBn": "<short description of the problem translated into natural Bengali/বাংলা>",
-  "cureBn": "<short, actionable treatment translated into natural Bengali/বাংলা>"
+  "issueBn": "<short description of the problem translated into natural Bengali/à¦¬à¦¾à¦‚à¦²à¦¾>",
+  "cureBn": "<short, actionable treatment translated into natural Bengali/à¦¬à¦¾à¦‚à¦²à¦¾>"
 }
 Do not add any text outside the JSON object.`
 
@@ -189,7 +190,7 @@ func chatRequest(history []*chat.Message, userMessage, lang string) geminiReques
 
 	systemPrompt := chatSystemPrompt
 	if lang == "bn" {
-		systemPrompt += " You MUST answer the user in Bengali (বাংলা). All advice, plant care tips, and explanations must be written in natural, fluent Bengali."
+		systemPrompt += " You MUST answer the user in Bengali (à¦¬à¦¾à¦‚à¦²à¦¾). All advice, plant care tips, and explanations must be written in natural, fluent Bengali."
 	}
 	return geminiRequest{
 		Contents:          contents,
@@ -315,5 +316,73 @@ func (c *Client) Analyze(ctx context.Context, imageData []byte, note string) (di
 		IssueBn:    dj.IssueBn,
 		CureBn:     dj.CureBn,
 		Provider:   aiprovider.Gemini,
+	}, nil
+}
+
+type identifyJSON struct {
+	Species               string `json:"species"`
+	SuggestedNickname     string `json:"suggestedNickname"`
+	Location              string `json:"location"`
+	Sunlight              string `json:"sunlight"`
+	WateringFrequencyDays int    `json:"wateringFrequencyDays"`
+	WaterAmountMl         int    `json:"waterAmountMl"`
+	Health                int    `json:"health"`
+	CareTips              string `json:"careTips"`
+}
+
+const identifyPrompt = `You are an expert botanist and horticulturist. Look at this photo of a plant and identify the plant species, give a cute/friendly suggested nickname (such as Monty, Leafy, Spiky, Sunny, etc.), recommend suitable indoor/outdoor location, sunlight requirements (e.g., Bright indirect light, Low light, Direct sunlight), watering interval in days (an integer), watering amount in ml (an integer), detected health score (integer from 0 to 100), and concise care tips.
+Reply ONLY as valid JSON with exactly these keys:
+{
+  "species": "<plant common name and scientific name in English>",
+  "suggestedNickname": "<a cute, charming nickname for this plant>",
+  "location": "<recommended placement, e.g. Indoor - Living Room, Balcony, etc.>",
+  "sunlight": "<sunlight requirement, e.g. Bright indirect sunlight>",
+  "wateringFrequencyDays": <integer, e.g. 7>,
+  "waterAmountMl": <integer, e.g. 250>,
+  "health": <integer from 0 to 100>,
+  "careTips": "<short practical care tips>"
+}
+Do not add any text outside the JSON object.`
+
+// Identify implements plant.Identifier.
+func (c *Client) Identify(ctx context.Context, imageData []byte) (plant.IdentificationResult, error) {
+	mimeType := http.DetectContentType(imageData)
+	encoded := base64.StdEncoding.EncodeToString(imageData)
+
+	raw, err := c.do(ctx, geminiRequest{
+		Contents: []geminiContent{
+			{
+				Role: "user",
+				Parts: []geminiPart{
+					{Text: identifyPrompt},
+					{InlineData: &geminiInlineData{MimeType: mimeType, Data: encoded}},
+				},
+			},
+		},
+		GenerationConfig: &geminiGenerationConfig{ResponseMimeType: "application/json"},
+	})
+	if err != nil {
+		return plant.IdentificationResult{}, err
+	}
+
+	raw = strings.TrimPrefix(raw, "```json")
+	raw = strings.TrimPrefix(raw, "```")
+	raw = strings.TrimSuffix(raw, "```")
+	raw = strings.TrimSpace(raw)
+
+	var ij identifyJSON
+	if err := json.Unmarshal([]byte(raw), &ij); err != nil {
+		return plant.IdentificationResult{}, fmt.Errorf("gemini: parse identify JSON %q: %w", raw, err)
+	}
+
+	return plant.IdentificationResult{
+		Species:               ij.Species,
+		SuggestedNickname:     ij.SuggestedNickname,
+		Location:              ij.Location,
+		Sunlight:              ij.Sunlight,
+		WateringFrequencyDays: ij.WateringFrequencyDays,
+		WaterAmountMl:         ij.WaterAmountMl,
+		Health:                ij.Health,
+		CareTips:              ij.CareTips,
 	}, nil
 }

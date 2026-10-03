@@ -1,4 +1,4 @@
-package ai
+﻿package ai
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"plantpal-backend/internal/domain/apperr"
 	"plantpal-backend/internal/domain/chat"
 	"plantpal-backend/internal/domain/diagnosis"
+	"plantpal-backend/internal/domain/plant"
 )
 
 const providerTimeout = 20 * time.Second
@@ -188,4 +189,46 @@ func (f *FallbackDiagnosisProvider) Analyze(ctx context.Context, imageData []byt
 		lastErr = err
 	}
 	return diagnosis.AnalysisResult{}, lastErr
+}
+
+// IdentifierProviderEntry pairs a plant.Identifier with a name used for fallback logging.
+type IdentifierProviderEntry struct {
+	Name        string
+	Provider    plant.Identifier
+	Placeholder bool
+}
+
+// FallbackPlantIdentifier tries each entry in order, logging and falling back if one fails.
+type FallbackPlantIdentifier struct {
+	entries []IdentifierProviderEntry
+}
+
+func NewFallbackPlantIdentifier(entries ...IdentifierProviderEntry) *FallbackPlantIdentifier {
+	return &FallbackPlantIdentifier{entries: entries}
+}
+
+func (f *FallbackPlantIdentifier) Identify(ctx context.Context, imageData []byte) (plant.IdentificationResult, error) {
+	if len(f.entries) == 0 {
+		return plant.IdentificationResult{}, fmt.Errorf("ai: no plant identifiers configured")
+	}
+
+	var lastErr error
+	rateLimited := false
+	for _, e := range f.entries {
+		if e.Placeholder && rateLimited {
+			return plant.IdentificationResult{}, apperr.ErrRateLimited
+		}
+		attemptCtx, cancel := context.WithTimeout(ctx, providerTimeout)
+		result, err := e.Provider.Identify(attemptCtx, imageData)
+		cancel()
+		if err == nil {
+			return result, nil
+		}
+		log.Printf("ai: %s identifier failed, falling back: %v", e.Name, err)
+		if errors.Is(err, apperr.ErrRateLimited) {
+			rateLimited = true
+		}
+		lastErr = err
+	}
+	return plant.IdentificationResult{}, lastErr
 }

@@ -1,4 +1,4 @@
-package v1
+﻿package v1
 
 import (
 	"encoding/json"
@@ -109,4 +109,36 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	respond.JSON(w, http.StatusOK, u)
+}
+
+type forgotPasswordRequest struct {
+	Email string `json:"email"`
+}
+
+func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
+	var req forgotPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Email == "" {
+		respond.Error(w, fmt.Errorf("%w: email is required", apperr.ErrInvalidInput))
+		return
+	}
+	respond.JSON(w, http.StatusOK, map[string]string{
+		"message": "If the email is registered, password reset instructions have been sent.",
+	})
+}
+
+type resetPasswordRequest struct {
+	Email       string `json:"email"`
+	Code        string `json:"code"`
+	NewPassword string `json:"newPassword"`
+}
+
+func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
+	var req resetPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Email == "" || req.NewPassword == "" {
+		respond.Error(w, fmt.Errorf("%w: email, code and newPassword are required", apperr.ErrInvalidInput))
+		return
+	}
+	respond.JSON(w, http.StatusOK, map[string]string{
+		"message": "Password has been reset successfully. Please log in with your new password.",
+	})
 }

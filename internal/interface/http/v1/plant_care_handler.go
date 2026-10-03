@@ -1,4 +1,4 @@
-package v1
+﻿package v1
 
 import (
 	"encoding/json"
@@ -14,12 +14,15 @@ import (
 )
 
 type updatePlantRequest struct {
-	Name     *string `json:"name,omitempty"`
-	Type     *string `json:"type,omitempty"`
-	AgeStage *string `json:"ageStage,omitempty"`
+	Name                  *string `json:"name,omitempty"`
+	Type                  *string `json:"type,omitempty"`
+	AgeStage              *string `json:"ageStage,omitempty"`
+	Location              *string `json:"location,omitempty"`
+	Sunlight              *string `json:"sunlight,omitempty"`
+	WateringFrequencyDays *int    `json:"wateringFrequencyDays,omitempty"`
 }
 
-// Update handles editing a plant's name/type/age-stage from "My Plants".
+// Update handles editing a plant's name/type/location/sunlight/watering-frequency from "My Plants".
 func (h *PlantHandler) Update(w http.ResponseWriter, r *http.Request) {
 	var req updatePlantRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -28,7 +31,13 @@ func (h *PlantHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	userID, _ := authmw.UserID(r.Context())
 	p, err := h.svc.Update(r.Context(), r.PathValue("id"), userID, plantuc.UpdateInput{
-		Name: req.Name, Type: req.Type, AgeStage: req.AgeStage, Lang: reqlocale.Resolve(r),
+		Name:                  req.Name,
+		Type:                  req.Type,
+		AgeStage:              req.AgeStage,
+		Location:              req.Location,
+		Sunlight:              req.Sunlight,
+		WateringFrequencyDays: req.WateringFrequencyDays,
+		Lang:                  reqlocale.Resolve(r),
 	})
 	if err != nil {
 		respond.Error(w, err)
@@ -64,19 +73,20 @@ func (h *PlantHandler) MarkFertilized(w http.ResponseWriter, r *http.Request) {
 // module.
 func (h *PlantHandler) Due(w http.ResponseWriter, r *http.Request) {
 	before := time.Now().UTC()
-	if q := r.URL.Query().Get("before"); q != "" {
-		parsed, err := time.Parse(time.RFC3339, q)
+	if raw := r.URL.Query().Get("before"); raw != "" {
+		t, err := time.Parse(time.RFC3339, raw)
 		if err != nil {
-			respond.Error(w, fmt.Errorf("%w: before must be RFC3339", apperr.ErrInvalidInput))
+			respond.Error(w, fmt.Errorf("%w: ?before must be RFC3339", apperr.ErrInvalidInput))
 			return
 		}
-		before = parsed
+		before = t
 	}
+
 	userID, _ := authmw.UserID(r.Context())
-	items, err := h.svc.Due(r.Context(), userID, before)
+	plants, err := h.svc.Due(r.Context(), userID, before)
 	if err != nil {
 		respond.Error(w, err)
 		return
 	}
-	respond.JSON(w, http.StatusOK, items)
+	respond.JSON(w, http.StatusOK, plants)
 }
