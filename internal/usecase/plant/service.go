@@ -52,9 +52,12 @@ type CreateInput struct {
 	WateringFrequencyDays int
 	// Outdoor marks a plant that lives outside (garden, balcony).
 	Outdoor bool
+	Image   string
 	// LastWateredAt is when the user last watered the plant. Omitted (nil)
 	// means "not watered / unknown": the plant is due right now.
 	LastWateredAt *time.Time
+	// LastWatered is an alias accepted for Flutter client compatibility.
+	LastWatered *time.Time
 	// WaterAmountMl and CareTips are optional values kept from the AI
 	// identify step. When set they replace the rule-based roadmap values, so
 	// the saved plan matches the preview the user saw.
@@ -72,6 +75,16 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (*plant.Plant, err
 	}
 	if strings.TrimSpace(in.UserID) == "" {
 		return nil, fmt.Errorf("%w: userID is required", apperr.ErrInvalidInput)
+	}
+
+	days := in.WateringFrequencyDays
+	if days < 0 {
+		days = 0
+	}
+
+	lastWatered := in.LastWateredAt
+	if lastWatered == nil {
+		lastWatered = in.LastWatered
 	}
 
 	now := time.Now().UTC()
@@ -94,20 +107,23 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (*plant.Plant, err
 		Location:              strings.TrimSpace(in.Location),
 		Sunlight:              strings.TrimSpace(in.Sunlight),
 		Outdoor:               in.Outdoor,
-		WateringFrequencyDays: in.WateringFrequencyDays,
+		ImageURL:              in.Image,
+		WateringFrequencyDays: days,
 		CareRoadmap:           roadmap,
+		FertilizerNote:        roadmap.FertilizerRecommendation,
 		NextWateringAt:        now, // not watered / unknown: due now
 		CreatedAt:             now,
 		UpdatedAt:             now,
 	}
-	if in.LastWateredAt != nil {
-		last := in.LastWateredAt.UTC()
+	if lastWatered != nil {
+		last := lastWatered.UTC()
 		if last.After(now) {
 			last = now // a watering cannot be in the future
 		}
 		p.LastWateredAt = &last
 		p.NextWateringAt = scheduleNextWatering(ctx, p, last)
 	}
+	p.WaterLevel = waterLevelFor(p.NextWateringAt, now)
 	setNextFertilizing(p, now)
 	if err := s.repo.Create(ctx, p); err != nil {
 		return nil, err

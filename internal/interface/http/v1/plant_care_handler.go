@@ -15,33 +15,67 @@ import (
 	plantuc "plantpal-backend/internal/usecase/plant"
 )
 
+// updatePlantRequest's JSON keys match the Flutter client's PlantDto -
+// notably `lastWatered`, which is how
+// lib/features/plants/presentation/providers/plants_provider.dart's
+// markWatered() actually marks a plant watered today (a PATCH, not the
+// dedicated POST /plants/{id}/water endpoint below).
 type updatePlantRequest struct {
-	Name                  *string `json:"name,omitempty"`
-	Type                  *string `json:"type,omitempty"`
-	AgeStage              *string `json:"ageStage,omitempty"`
-	Location              *string `json:"location,omitempty"`
-	Sunlight              *string `json:"sunlight,omitempty"`
-	Outdoor               *bool   `json:"outdoor,omitempty"`
-	WateringFrequencyDays *int    `json:"wateringFrequencyDays,omitempty"`
+	Name                  *string    `json:"name,omitempty"`
+	Nickname              *string    `json:"nickname,omitempty"`
+	Type                  *string    `json:"type,omitempty"`
+	Species               *string    `json:"species,omitempty"`
+	AgeStage              *string    `json:"ageStage,omitempty"`
+	Location              *string    `json:"location,omitempty"`
+	Sunlight              *string    `json:"sunlight,omitempty"`
+	Outdoor               *bool      `json:"outdoor,omitempty"`
+	Image                 *string    `json:"image,omitempty"`
+	Status                *string    `json:"status,omitempty"`
+	Humidity              *string    `json:"humidity,omitempty"`
+	Health                *int       `json:"health,omitempty"`
+	WateringFrequencyDays *int       `json:"wateringFrequencyDays,omitempty"`
+	LastWateredAt         *time.Time `json:"lastWateredAt,omitempty"`
+	LastWatered           *time.Time `json:"lastWatered,omitempty"`
+	LastScan              *time.Time `json:"lastScan,omitempty"`
 }
 
-// Update handles editing a plant's name/type/location/sunlight/watering-frequency from "My Plants".
+// Update handles editing any subset of a plant's fields from "My Plants".
 func (h *PlantHandler) Update(w http.ResponseWriter, r *http.Request) {
 	var req updatePlantRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respond.Error(w, fmt.Errorf("%w: invalid JSON body", apperr.ErrInvalidInput))
 		return
 	}
+
+	name := req.Name
+	if name == nil {
+		name = req.Nickname
+	}
+	typ := req.Type
+	if typ == nil {
+		typ = req.Species
+	}
+	lastWatered := req.LastWateredAt
+	if lastWatered == nil {
+		lastWatered = req.LastWatered
+	}
+
 	userID, _ := authmw.UserID(r.Context())
 	ctx := plant.ContextWithLocation(r.Context(), reqtz.Resolve(r))
 	p, err := h.svc.Update(ctx, r.PathValue("id"), userID, plantuc.UpdateInput{
-		Name:                  req.Name,
-		Type:                  req.Type,
+		Name:                  name,
+		Type:                  typ,
 		AgeStage:              req.AgeStage,
 		Location:              req.Location,
 		Sunlight:              req.Sunlight,
 		Outdoor:               req.Outdoor,
+		Image:                 req.Image,
+		Status:                req.Status,
+		Humidity:              req.Humidity,
+		Health:                req.Health,
 		WateringFrequencyDays: req.WateringFrequencyDays,
+		LastWatered:           lastWatered,
+		LastScan:              req.LastScan,
 		Lang:                  reqlocale.Resolve(r),
 	})
 	if err != nil {

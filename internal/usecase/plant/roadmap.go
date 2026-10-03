@@ -1,6 +1,7 @@
 package plant
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -60,7 +61,43 @@ func buildRoadmap(plantType, ageStage, lang string) plant.CareRoadmap {
 		waterAmountMl += 100
 	}
 	return plant.CareRoadmap{
-		WateringTimes: wateringTimes, WaterAmountMl: waterAmountMl,
-		Tips: tips, FertilizerRecommendation: fertilizer, FertilizingIntervalDays: fertDays,
+		WateringTimes:            wateringTimes,
+		WaterAmountMl:            waterAmountMl,
+		Tips:                     tips,
+		FertilizerRecommendation: fertilizer,
+		FertilizingIntervalDays:  fertDays,
+	}
+}
+
+// recomputeWatering sets NextWateringAt (LastWateredAt, or now if never
+// watered, plus WateringFrequencyDays) and the display WaterLevel. Called
+// on create, on any update that touches LastWateredAt or
+// WateringFrequencyDays, and by MarkWatered.
+func recomputeWatering(p *plant.Plant, now time.Time) {
+	base := now
+	if p.LastWateredAt != nil {
+		base = *p.LastWateredAt
+	}
+	days := p.WateringFrequencyDays
+	if days < 1 {
+		days = 7
+	}
+	p.NextWateringAt = base.AddDate(0, 0, days)
+	p.WaterLevel = waterLevelFor(p.NextWateringAt, now)
+}
+
+// waterLevelFor is a fixed-English display string - the Flutter client
+// checks `waterLevel == 'Today'` literally (see
+// lib/features/plants/presentation/providers/plants_provider.dart's
+// waterTodayCount), so this must not be localized.
+func waterLevelFor(next, now time.Time) string {
+	days := int(next.Truncate(24*time.Hour).Sub(now.Truncate(24*time.Hour)).Hours() / 24)
+	switch {
+	case days <= 0:
+		return "Today"
+	case days == 1:
+		return "Tomorrow"
+	default:
+		return fmt.Sprintf("In %d days", days)
 	}
 }

@@ -11,4 +11,8 @@ type Repository interface {
 	GetByGoogleID(ctx context.Context, googleID string) (*User, error)
 	// LinkGoogle attaches a Google account to an existing user.
 	LinkGoogle(ctx context.Context, id, googleID string) error
+	// UpdatePasswordHash sets (or, for a Google-only account, adds) a
+	// user's password. Used by Register and by the forgot/reset-password
+	// flow.
+	UpdatePasswordHash(ctx context.Context, id, passwordHash string) error
 }

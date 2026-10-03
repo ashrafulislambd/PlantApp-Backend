@@ -38,6 +38,7 @@ func (s *Service) MarkWateredWithPoints(ctx context.Context, id, userID string) 
 	}
 	p.LastWateredAt = &now
 	p.NextWateringAt = scheduleNextWatering(ctx, p, now)
+	p.WaterLevel = waterLevelFor(p.NextWateringAt, now)
 	p.UpdatedAt = now
 	if err := s.repo.Update(ctx, p); err != nil {
 		return CareResult{}, err
@@ -101,6 +102,7 @@ func (s *Service) Skip(ctx context.Context, id, userID, reason string, days int)
 	}
 	now := time.Now().UTC()
 	p.NextWateringAt = now.AddDate(0, 0, days)
+	p.WaterLevel = waterLevelFor(p.NextWateringAt, now)
 	p.UpdatedAt = now
 	if err := s.repo.Update(ctx, p); err != nil {
 		return nil, err

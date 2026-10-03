@@ -1,4 +1,4 @@
-﻿package v1
+package v1
 
 import (
 	"encoding/json"
@@ -101,16 +101,6 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
-	userID, _ := authmw.UserID(r.Context())
-	u, err := h.svc.Me(r.Context(), userID)
-	if err != nil {
-		respond.Error(w, err)
-		return
-	}
-	respond.JSON(w, http.StatusOK, u)
-}
-
 type forgotPasswordRequest struct {
 	Email string `json:"email"`
 }
@@ -121,9 +111,11 @@ func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 		respond.Error(w, fmt.Errorf("%w: email is required", apperr.ErrInvalidInput))
 		return
 	}
-	respond.JSON(w, http.StatusOK, map[string]string{
-		"message": "If the email is registered, password reset instructions have been sent.",
-	})
+	if err := h.svc.ForgotPassword(r.Context(), req.Email); err != nil {
+		respond.Error(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 type resetPasswordRequest struct {
@@ -134,11 +126,23 @@ type resetPasswordRequest struct {
 
 func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	var req resetPasswordRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Email == "" || req.NewPassword == "" {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Email == "" || req.Code == "" || req.NewPassword == "" {
 		respond.Error(w, fmt.Errorf("%w: email, code and newPassword are required", apperr.ErrInvalidInput))
 		return
 	}
-	respond.JSON(w, http.StatusOK, map[string]string{
-		"message": "Password has been reset successfully. Please log in with your new password.",
-	})
+	if err := h.svc.ResetPassword(r.Context(), req.Email, req.Code, req.NewPassword); err != nil {
+		respond.Error(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
+	userID, _ := authmw.UserID(r.Context())
+	u, err := h.svc.Me(r.Context(), userID)
+	if err != nil {
+		respond.Error(w, err)
+		return
+	}
+	respond.JSON(w, http.StatusOK, u)
 }

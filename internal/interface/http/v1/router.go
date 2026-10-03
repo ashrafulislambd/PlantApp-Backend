@@ -59,10 +59,10 @@ func RegisterRoutes(mux *http.ServeMux, deps Dependencies) {
 	mux.HandleFunc("POST "+basePath+"/auth/register", authH.Register)
 	mux.HandleFunc("POST "+basePath+"/auth/login", authH.Login)
 	mux.HandleFunc("POST "+basePath+"/auth/google", authH.Google)
-	mux.HandleFunc("POST "+basePath+"/auth/refresh", authH.Refresh)
-	mux.HandleFunc("POST "+basePath+"/auth/logout", authH.Logout)
 	mux.HandleFunc("POST "+basePath+"/auth/forgot-password", authH.ForgotPassword)
 	mux.HandleFunc("POST "+basePath+"/auth/reset-password", authH.ResetPassword)
+	mux.HandleFunc("POST "+basePath+"/auth/refresh", authH.Refresh)
+	mux.HandleFunc("POST "+basePath+"/auth/logout", authH.Logout)
 	mux.HandleFunc("GET "+basePath+"/auth/me", deps.RequireAuth(authH.Me))
 
 	fertH := NewFertilizerHandler(deps.FertilizerService)

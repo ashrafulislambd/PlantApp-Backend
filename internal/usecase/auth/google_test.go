@@ -60,6 +60,14 @@ func (f *fakeUsers) LinkGoogle(_ context.Context, id, g string) error {
 	u.GoogleID = g
 	return nil
 }
+func (f *fakeUsers) UpdatePasswordHash(_ context.Context, id, hash string) error {
+	u, ok := f.byID[id]
+	if !ok {
+		return apperr.ErrNotFound
+	}
+	u.PasswordHash = hash
+	return nil
+}
 
 type fakeTokens struct{ n int }
 

@@ -30,16 +30,22 @@ func NewPlantHandler(svc *plantuc.Service, maxImageBytes int64) *PlantHandler {
 	return &PlantHandler{svc: svc, maxImageBytes: maxImageBytes}
 }
 
+// createPlantRequest accepts both standard keys (name, type, lastWateredAt)
+// and Flutter client keys (nickname, species, lastWatered).
 type createPlantRequest struct {
-	Name                  string `json:"name"`
-	Type                  string `json:"type"`
-	AgeStage              string `json:"ageStage"`
-	Location              string `json:"location"`
-	Sunlight              string `json:"sunlight"`
-	Outdoor               bool   `json:"outdoor"`
-	WateringFrequencyDays int    `json:"wateringFrequencyDays"`
+	Name                  string     `json:"name"`
+	Nickname              string     `json:"nickname"`
+	Type                  string     `json:"type"`
+	Species               string     `json:"species"`
+	AgeStage              string     `json:"ageStage"`
+	Location              string     `json:"location"`
+	Sunlight              string     `json:"sunlight"`
+	Outdoor               bool       `json:"outdoor"`
+	Image                 string     `json:"image"`
+	WateringFrequencyDays int        `json:"wateringFrequencyDays"`
 	// LastWateredAt (RFC3339) is optional; omitted means the plant is due now.
 	LastWateredAt *time.Time `json:"lastWateredAt,omitempty"`
+	LastWatered   *time.Time `json:"lastWatered,omitempty"`
 	// WaterAmountMl and CareTips are optional AI-identify values stored in
 	// the care roadmap.
 	WaterAmountMl int    `json:"waterAmountMl,omitempty"`
@@ -53,18 +59,32 @@ func (h *PlantHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
+		name = strings.TrimSpace(req.Nickname)
+	}
+	typ := strings.TrimSpace(req.Type)
+	if typ == "" {
+		typ = strings.TrimSpace(req.Species)
+	}
+	lastWatered := req.LastWateredAt
+	if lastWatered == nil {
+		lastWatered = req.LastWatered
+	}
+
 	userID, _ := authmw.UserID(r.Context())
 	ctx := plant.ContextWithLocation(r.Context(), reqtz.Resolve(r))
 	p, err := h.svc.Create(ctx, plantuc.CreateInput{
 		UserID:                userID,
-		Name:                  req.Name,
-		Type:                  req.Type,
+		Name:                  name,
+		Type:                  typ,
 		AgeStage:              req.AgeStage,
 		Location:              req.Location,
 		Sunlight:              req.Sunlight,
 		Outdoor:               req.Outdoor,
+		Image:                 req.Image,
 		WateringFrequencyDays: req.WateringFrequencyDays,
-		LastWateredAt:         req.LastWateredAt,
+		LastWateredAt:         lastWatered,
 		WaterAmountMl:         req.WaterAmountMl,
 		CareTips:              req.CareTips,
 		Lang:                  reqlocale.Resolve(r),
