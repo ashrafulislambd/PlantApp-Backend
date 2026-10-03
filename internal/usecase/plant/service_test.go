@@ -48,28 +48,22 @@ func TestCreate_RoadmapBySeedAgeStage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
-	if p.CareRoadmap.WaterAmountMl != 100 {
-		t.Errorf("WaterAmountMl = %d, want 100 for seed stage", p.CareRoadmap.WaterAmountMl)
-	}
-	if len(p.CareRoadmap.WateringTimes) != 1 {
-		t.Errorf("WateringTimes = %v, want exactly 1 entry for seed stage", p.CareRoadmap.WateringTimes)
+	if p.CareRoadmap.FertilizingIntervalDays != 0 {
+		t.Errorf("FertilizingIntervalDays = %d, want 0 for seed stage (no fertilizing yet)", p.CareRoadmap.FertilizingIntervalDays)
 	}
 }
 
-func TestCreate_RoadmapByMatureAgeStageAndWaterType(t *testing.T) {
+func TestCreate_RoadmapByMatureAgeStage(t *testing.T) {
 	svc := newTestService()
 	p, err := svc.Create(context.Background(), CreateInput{UserID: "user_1", Name: "Rose", Type: "Water based", AgeStage: "mature"})
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
-	if p.CareRoadmap.WaterAmountMl != 400 {
-		t.Errorf("WaterAmountMl = %d, want 400 for mature + water-based", p.CareRoadmap.WaterAmountMl)
+	if p.CareRoadmap.FertilizingIntervalDays != 7 {
+		t.Errorf("FertilizingIntervalDays = %d, want 7 for mature stage", p.CareRoadmap.FertilizingIntervalDays)
 	}
-	if len(p.CareRoadmap.WateringTimes) != 3 {
-		t.Errorf("WateringTimes = %v, want 3 entries for mature stage", p.CareRoadmap.WateringTimes)
-	}
-	if !strings.Contains(p.CareRoadmap.FertilizerRecommendation, "Potassium") {
-		t.Errorf("FertilizerRecommendation = %q, want it to mention Potassium for mature stage", p.CareRoadmap.FertilizerRecommendation)
+	if !strings.Contains(p.FertilizerNote, "Potassium") {
+		t.Errorf("FertilizerNote = %q, want it to mention Potassium for mature stage", p.FertilizerNote)
 	}
 }
 
@@ -79,8 +73,8 @@ func TestCreate_RoadmapDefaultAgeStage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
-	if p.CareRoadmap.WaterAmountMl != 200 {
-		t.Errorf("WaterAmountMl = %d, want 200 default", p.CareRoadmap.WaterAmountMl)
+	if p.CareRoadmap.FertilizingIntervalDays != 14 {
+		t.Errorf("FertilizingIntervalDays = %d, want 14 default", p.CareRoadmap.FertilizingIntervalDays)
 	}
 }
 
@@ -93,8 +87,41 @@ func TestCreate_RoadmapLocalizedToBengali(t *testing.T) {
 	if strings.Contains(p.CareRoadmap.Tips, "sun") {
 		t.Errorf("Tips = %q, expected Bengali text, got English", p.CareRoadmap.Tips)
 	}
-	if strings.Contains(p.CareRoadmap.FertilizerRecommendation, "Potassium") {
-		t.Errorf("FertilizerRecommendation = %q, expected Bengali text, got English", p.CareRoadmap.FertilizerRecommendation)
+	if strings.Contains(p.FertilizerNote, "Potassium") {
+		t.Errorf("FertilizerNote = %q, expected Bengali text, got English", p.FertilizerNote)
+	}
+}
+
+func TestCreate_DefaultsWateringFrequencyAndComputesNextWatering(t *testing.T) {
+	svc := newTestService()
+	p, err := svc.Create(context.Background(), CreateInput{UserID: "user_1", Name: "Fern"})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+	if p.WateringFrequencyDays != 7 {
+		t.Errorf("WateringFrequencyDays = %d, want 7 default", p.WateringFrequencyDays)
+	}
+	// Never watered -> base is "now", so next watering is 7 days out.
+	if p.WaterLevel != "In 7 days" {
+		t.Errorf("WaterLevel = %q, want %q for a freshly-added, never-watered plant", p.WaterLevel, "In 7 days")
+	}
+}
+
+func TestMarkWatered_RollsNextWateringForward(t *testing.T) {
+	svc := newTestService()
+	p, err := svc.Create(context.Background(), CreateInput{UserID: "user_1", Name: "Fern", WateringFrequencyDays: 3})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+	updated, err := svc.MarkWatered(context.Background(), p.ID, "user_1")
+	if err != nil {
+		t.Fatalf("MarkWatered() error = %v", err)
+	}
+	if updated.LastWateredAt == nil {
+		t.Fatal("LastWateredAt was not set")
+	}
+	if updated.WaterLevel != "In 3 days" {
+		t.Errorf("WaterLevel = %q, want %q", updated.WaterLevel, "In 3 days")
 	}
 }
 

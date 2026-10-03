@@ -10,8 +10,8 @@ import (
 	"plantpal-backend/internal/domain/plant"
 )
 
-// MarkWatered logs a watering now and rolls NextWateringAt to the next
-// scheduled time-of-day.
+// MarkWatered logs a watering now and rolls NextWateringAt forward by
+// WateringFrequencyDays.
 func (s *Service) MarkWatered(ctx context.Context, id, userID string) (*plant.Plant, error) {
 	p, err := s.repo.GetByID(ctx, id, userID)
 	if err != nil {
@@ -19,7 +19,7 @@ func (s *Service) MarkWatered(ctx context.Context, id, userID string) (*plant.Pl
 	}
 	now := time.Now().UTC()
 	p.LastWateredAt = &now
-	p.NextWateringAt = nextWateringTime(p.CareRoadmap.WateringTimes, now)
+	recomputeWatering(p, now)
 	p.UpdatedAt = now
 	if err := s.repo.Update(ctx, p); err != nil {
 		return nil, err

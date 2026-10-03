@@ -212,8 +212,8 @@ func TestFertilizers_CreateAndGet(t *testing.T) {
 func TestPlants_CreateGeneratesRoadmap(t *testing.T) {
 	router := newTestRouter()
 	rec, env := doRequest(t, router, http.MethodPost, "/api/v1/plants", "", map[string]string{
-		"name":     "Rose",
-		"type":     "Water based",
+		"nickname": "Rose",
+		"species":  "Water based",
 		"ageStage": "mature",
 	})
 	if rec.Code != http.StatusCreated {
@@ -221,18 +221,15 @@ func TestPlants_CreateGeneratesRoadmap(t *testing.T) {
 	}
 	var created map[string]any
 	_ = json.Unmarshal(env.Data, &created)
-	roadmap, _ := created["careRoadmap"].(map[string]any)
-	if roadmap == nil {
-		t.Fatal("response has no careRoadmap")
-	}
-	if amount, _ := roadmap["waterAmountMl"].(float64); amount != 400 {
-		t.Errorf("waterAmountMl = %v, want 400 for mature+water-based", roadmap["waterAmountMl"])
+	note, _ := created["fertilizerNote"].(string)
+	if !strings.Contains(note, "Potassium") {
+		t.Errorf("fertilizerNote = %q, want it to mention Potassium for mature stage", note)
 	}
 }
 
 func TestPlants_Create_MissingName(t *testing.T) {
 	router := newTestRouter()
-	rec, _ := doRequest(t, router, http.MethodPost, "/api/v1/plants", "", map[string]string{"type": "cactus"})
+	rec, _ := doRequest(t, router, http.MethodPost, "/api/v1/plants", "", map[string]string{"species": "cactus"})
 	if rec.Code != http.StatusBadRequest {
 		t.Errorf("status = %d, want %d", rec.Code, http.StatusBadRequest)
 	}

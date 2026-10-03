@@ -23,10 +23,15 @@ func NewService(repo plant.Repository, ids idgen.Generator) *Service {
 }
 
 type CreateInput struct {
-	UserID   string
-	Name     string
-	Type     string
-	AgeStage string
+	UserID                string
+	Name                  string
+	Type                  string
+	AgeStage              string
+	Location              string
+	Sunlight              string
+	Image                 string
+	WateringFrequencyDays int
+	LastWatered           *time.Time
 	// Lang is the requester's UI language ("en" or "bn"), used to pick
 	// which language the generated tips/fertilizer text comes back in.
 	Lang string
@@ -41,19 +46,30 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (*plant.Plant, err
 		return nil, fmt.Errorf("%w: userID is required", apperr.ErrInvalidInput)
 	}
 
-	now := time.Now().UTC()
-	roadmap := buildRoadmap(in.Type, in.AgeStage, in.Lang)
-	p := &plant.Plant{
-		ID:             s.ids.New("pl"),
-		UserID:         in.UserID,
-		Name:           name,
-		Type:           strings.TrimSpace(in.Type),
-		AgeStage:       strings.TrimSpace(in.AgeStage),
-		CareRoadmap:    roadmap,
-		NextWateringAt: nextWateringTime(roadmap.WateringTimes, now),
-		CreatedAt:      now,
-		UpdatedAt:      now,
+	days := in.WateringFrequencyDays
+	if days < 1 {
+		days = 7
 	}
+
+	now := time.Now().UTC()
+	roadmap, fertilizerNote := buildRoadmap(in.AgeStage, in.Lang)
+	p := &plant.Plant{
+		ID:                    s.ids.New("pl"),
+		UserID:                in.UserID,
+		Name:                  name,
+		Type:                  strings.TrimSpace(in.Type),
+		AgeStage:              strings.TrimSpace(in.AgeStage),
+		Location:              strings.TrimSpace(in.Location),
+		Sunlight:              strings.TrimSpace(in.Sunlight),
+		Image:                 in.Image,
+		CareRoadmap:           roadmap,
+		FertilizerNote:        fertilizerNote,
+		WateringFrequencyDays: days,
+		LastWateredAt:         in.LastWatered,
+		CreatedAt:             now,
+		UpdatedAt:             now,
+	}
+	recomputeWatering(p, now)
 	setNextFertilizing(p, now)
 	if err := s.repo.Create(ctx, p); err != nil {
 		return nil, err
