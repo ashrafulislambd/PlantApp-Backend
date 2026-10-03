@@ -53,6 +53,22 @@ func (r *DiagnosisRepository) GetByID(ctx context.Context, id, userID string) (*
 	return &d, nil
 }
 
+func (r *DiagnosisRepository) MarkTreated(ctx context.Context, id, userID string, at time.Time) (*diagnosis.Diagnosis, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	// Only set the timestamp the first time, so repeats keep the original.
+	_, err := r.coll.UpdateOne(ctx,
+		bson.M{"_id": id, "userId": userID, "treated": bson.M{"$ne": true}},
+		bson.M{"$set": bson.M{"treated": true, "treatedAt": at}},
+	)
+	if err != nil {
+		return nil, err
+	}
+	// GetByID doubles as the ownership / existence check.
+	return r.GetByID(ctx, id, userID)
+}
+
 func (r *DiagnosisRepository) List(ctx context.Context, userID string, plantID *string) ([]*diagnosis.Diagnosis, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()

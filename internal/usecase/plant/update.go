@@ -11,7 +11,9 @@ import (
 )
 
 type UpdateInput struct {
-	Name, Type, AgeStage, Location, Sunlight, Image, Status, Humidity *string
+	Name, Type, AgeStage                                              *string
+	Location, Sunlight, Image, Status, Humidity                       *string
+	Outdoor                                                           *bool
 	Health                                                            *int
 	WateringFrequencyDays                                             *int
 	LastWatered                                                       *time.Time
@@ -19,17 +21,19 @@ type UpdateInput struct {
 	Lang                                                              string
 }
 
-// Update edits any subset of a plant's fields. Changing Type or AgeStage
-// regenerates the roadmap/fertilizer note; changing LastWatered or
-// WateringFrequencyDays recomputes the next watering time, same as
-// Create/MarkWatered.
+// Update edits any subset of a plant's fields.
+//
+// The care roadmap (and the fertilizing schedule) is regenerated only when
+// Type or AgeStage really changed. Changing the watering interval re-anchors
+// the next watering on LastWateredAt, never on "now"; a plant that was never
+// watered keeps its due date.
 func (s *Service) Update(ctx context.Context, id, userID string, in UpdateInput) (*plant.Plant, error) {
 	p, err := s.repo.GetByID(ctx, id, userID)
 	if err != nil {
 		return nil, err
 	}
 
-	regenerateRoadmap := false
+	regenerate := false
 	if in.Name != nil {
 		name := strings.TrimSpace(*in.Name)
 		if name == "" {
@@ -38,10 +42,18 @@ func (s *Service) Update(ctx context.Context, id, userID string, in UpdateInput)
 		p.Name = name
 	}
 	if in.Type != nil {
-		p.Type, regenerateRoadmap = strings.TrimSpace(*in.Type), true
+		t := strings.TrimSpace(*in.Type)
+		if !strings.EqualFold(t, p.Type) {
+			regenerate = true
+		}
+		p.Type = t
 	}
 	if in.AgeStage != nil {
-		p.AgeStage, regenerateRoadmap = strings.TrimSpace(*in.AgeStage), true
+		a := strings.TrimSpace(*in.AgeStage)
+		if !strings.EqualFold(a, p.AgeStage) {
+			regenerate = true
+		}
+		p.AgeStage = a
 	}
 	if in.Location != nil {
 		p.Location = strings.TrimSpace(*in.Location)
@@ -49,8 +61,11 @@ func (s *Service) Update(ctx context.Context, id, userID string, in UpdateInput)
 	if in.Sunlight != nil {
 		p.Sunlight = strings.TrimSpace(*in.Sunlight)
 	}
+	if in.Outdoor != nil {
+		p.Outdoor = *in.Outdoor
+	}
 	if in.Image != nil {
-		p.Image = *in.Image
+		p.ImageURL = *in.Image
 	}
 	if in.Status != nil {
 		p.Status = strings.TrimSpace(*in.Status)
@@ -59,34 +74,37 @@ func (s *Service) Update(ctx context.Context, id, userID string, in UpdateInput)
 		p.Humidity = strings.TrimSpace(*in.Humidity)
 	}
 	if in.Health != nil {
-		p.Health = in.Health
-	}
-	if in.LastScan != nil {
-		p.LastScan = in.LastScan
+		p.Health = *in.Health
 	}
 
-	recomputeWateringNeeded := false
-	if in.WateringFrequencyDays != nil && *in.WateringFrequencyDays > 0 {
-		p.WateringFrequencyDays = *in.WateringFrequencyDays
-		recomputeWateringNeeded = true
-	}
 	if in.LastWatered != nil {
 		p.LastWateredAt = in.LastWatered
-		recomputeWateringNeeded = true
 	}
 
 	now := time.Now().UTC()
-	if regenerateRoadmap {
-		roadmap, fertilizerNote := buildRoadmap(p.AgeStage, in.Lang)
-		p.CareRoadmap, p.FertilizerNote = roadmap, fertilizerNote
+	if in.WateringFrequencyDays != nil && *in.WateringFrequencyDays > 0 && *in.WateringFrequencyDays != p.WateringFrequencyDays {
+		p.WateringFrequencyDays = *in.WateringFrequencyDays
+		if p.LastWateredAt != nil {
+			p.NextWateringAt = scheduleNextWatering(ctx, p, *p.LastWateredAt)
+		}
+		// never watered: keep the existing due date
+	} else if in.LastWatered != nil {
+		if p.LastWateredAt != nil {
+			p.NextWateringAt = scheduleNextWatering(ctx, p, *p.LastWateredAt)
+		}
+	}
+	if regenerate {
+		p.CareRoadmap = buildRoadmap(p.Type, p.AgeStage, in.Lang)
+		p.FertilizerNote = p.CareRoadmap.FertilizerRecommendation
+		if p.WateringFrequencyDays <= 0 && p.LastWateredAt != nil {
+			p.NextWateringAt = scheduleNextWatering(ctx, p, *p.LastWateredAt)
+		}
 		setNextFertilizing(p, now)
 	}
-	if recomputeWateringNeeded {
-		recomputeWatering(p, now)
-	}
+	p.WaterLevel = waterLevelFor(p.NextWateringAt, now)
 	p.UpdatedAt = now
 	if err := s.repo.Update(ctx, p); err != nil {
 		return nil, err
 	}
-	return p, nil
+	return s.withHealth(ctx, p), nil
 }

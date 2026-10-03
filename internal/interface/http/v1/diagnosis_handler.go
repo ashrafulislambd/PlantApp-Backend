@@ -40,12 +40,18 @@ return &DiagnosisHandler{svc: svc, maxImageBytes: maxImageBytes}
 type createDiagnosisRequest struct {
 PlantID     *string `json:"plantId,omitempty"`
 ImageBase64 string  `json:"imageBase64"`
+// SessionID, when set, also records the scan in that chat session.
+SessionID string `json:"sessionId,omitempty"`
+// Note is the user's optional caption for the photo.
+Note string `json:"note,omitempty"`
 }
 
 type upload struct {
 plantID     *string
 data        []byte
 contentType string
+sessionID   string
+note        string
 }
 
 // Create accepts either multipart/form-data (fields: "image" file, optional
@@ -72,6 +78,9 @@ UserID:      userID,
 PlantID:     up.plantID,
 ImageData:   up.data,
 ContentType: up.contentType,
+SessionID:   up.sessionID,
+Note:        up.note,
+Lang:        reqlocale.Resolve(r),
 })
 if err != nil {
 respond.Error(w, err)
@@ -106,7 +115,12 @@ if !allowedImageTypes[ct] {
 return upload{}, fmt.Errorf("%w: unsupported image type (use JPEG, PNG or WebP)", apperr.ErrInvalidInput)
 }
 
-up := upload{data: data, contentType: ct}
+up := upload{
+data:        data,
+contentType: ct,
+sessionID:   strings.TrimSpace(r.FormValue("sessionId")),
+note:        strings.TrimSpace(r.FormValue("note")),
+}
 if v := strings.TrimSpace(r.FormValue("plantId")); v != "" {
 up.plantID = &v
 }
@@ -133,7 +147,13 @@ ct := http.DetectContentType(data)
 if !allowedImageTypes[ct] {
 ct = "image/jpeg"
 }
-return upload{plantID: req.PlantID, data: data, contentType: ct}, nil
+return upload{
+plantID:     req.PlantID,
+data:        data,
+contentType: ct,
+sessionID:   strings.TrimSpace(req.SessionID),
+note:        strings.TrimSpace(req.Note),
+}, nil
 }
 
 func (h *DiagnosisHandler) tooLarge() error {
@@ -170,6 +190,17 @@ respond.JSON(w, http.StatusOK, out)
 func (h *DiagnosisHandler) Get(w http.ResponseWriter, r *http.Request) {
 userID, _ := authmw.UserID(r.Context())
 d, err := h.svc.Get(r.Context(), r.PathValue("id"), userID)
+if err != nil {
+respond.Error(w, err)
+return
+}
+respond.JSON(w, http.StatusOK, presentDiagnosis(*d, reqlocale.Resolve(r)))
+}
+
+// MarkTreated flags a scan as treated (POST /diagnoses/{id}/treated).
+func (h *DiagnosisHandler) MarkTreated(w http.ResponseWriter, r *http.Request) {
+userID, _ := authmw.UserID(r.Context())
+d, err := h.svc.MarkTreated(r.Context(), r.PathValue("id"), userID)
 if err != nil {
 respond.Error(w, err)
 return

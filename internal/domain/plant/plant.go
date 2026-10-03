@@ -4,57 +4,88 @@
 // waterings/fertilizings, and gets reminders when the next one is due.
 package plant
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 // CareRoadmap holds generated care guidance for a plant, derived from its
-// age stage. FertilizerRecommendation is stored separately on Plant
-// (FertilizerNote) since the Flutter client reads it as a top-level field.
+// age stage and type.
 type CareRoadmap struct {
-	Tips                    string `bson:"tips"`
-	FertilizingIntervalDays int    `bson:"fertilizingIntervalDays"`
+	WateringTimes            []string `json:"wateringTimes,omitempty" bson:"wateringTimes,omitempty"`
+	WaterAmountMl            int      `json:"waterAmountMl,omitempty" bson:"waterAmountMl,omitempty"`
+	Tips                     string   `json:"tips" bson:"tips"`
+	FertilizerRecommendation string   `json:"fertilizerRecommendation,omitempty" bson:"fertilizerRecommendation,omitempty"`
+	FertilizingIntervalDays  int      `json:"fertilizingIntervalDays" bson:"fertilizingIntervalDays"`
 }
 
 // Plant is a plant registered by a user for care tracking.
-//
-// JSON field names match the Flutter client's existing model exactly (see
-// lib/features/plants/domain/model/plant.dart and
-// lib/features/plants/data/models/plant_dto.dart) - Go/BSON names stay
-// close to the original backend schema (Name/Type, not Nickname/Species)
-// to avoid a data migration and keep MarkWatered/MarkFertilized/Due
-// untouched.
 type Plant struct {
-	ID       string `json:"_id" bson:"_id"`
-	UserID   string `json:"userId" bson:"userId"`
-	Name     string `json:"nickname" bson:"name"`
-	Type     string `json:"species" bson:"type"`
-	AgeStage string `json:"ageStage,omitempty" bson:"ageStage,omitempty"`
+	ID                    string      `json:"id" bson:"_id"`
+	UserID                string      `json:"userId" bson:"userId"`
+	Name                  string      `json:"name" bson:"name"`
+	Type                  string      `json:"type" bson:"type"`
+	AgeStage              string      `json:"ageStage,omitempty" bson:"ageStage,omitempty"`
+	Location              string      `json:"location,omitempty" bson:"location,omitempty"`
+	Sunlight              string      `json:"sunlight,omitempty" bson:"sunlight,omitempty"`
+	// Outdoor is true for plants that live outside (garden, balcony): they get
+	// the weather-aware tips (e.g. "raining: skip watering"). Default: indoor.
+	Outdoor               bool        `json:"outdoor" bson:"outdoor"`
+	WateringFrequencyDays int         `json:"wateringFrequencyDays,omitempty" bson:"wateringFrequencyDays,omitempty"`
+	ImageKey              string      `json:"imageKey,omitempty" bson:"imageKey,omitempty"`
+	ImageURL              string      `json:"image,omitempty" bson:"imageUrl,omitempty"`
+	CareRoadmap           CareRoadmap `json:"careRoadmap" bson:"careRoadmap"`
+	FertilizerNote        string      `json:"fertilizerNote,omitempty" bson:"fertilizerNote,omitempty"`
 
-	Image    string     `json:"image" bson:"image,omitempty"`
-	Location string     `json:"location" bson:"location,omitempty"`
-	Sunlight string     `json:"sunlight" bson:"sunlight,omitempty"`
-	Health   *int       `json:"health,omitempty" bson:"health,omitempty"`
-	Status   string     `json:"status" bson:"status,omitempty"`
-	Humidity string     `json:"humidity" bson:"humidity,omitempty"`
-	LastScan *time.Time `json:"lastScan,omitempty" bson:"lastScan,omitempty"`
+	Status                string      `json:"status,omitempty" bson:"status,omitempty"`
+	Humidity              string      `json:"humidity,omitempty" bson:"humidity,omitempty"`
 
-	CareRoadmap    CareRoadmap `json:"-" bson:"careRoadmap"`
-	FertilizerNote string      `json:"fertilizerNote" bson:"fertilizerNote,omitempty"`
+	LastWateredAt         *time.Time  `json:"lastWateredAt,omitempty" bson:"lastWateredAt,omitempty"`
+	NextWateringAt        time.Time   `json:"nextWateringAt" bson:"nextWateringAt"`
+	WaterLevel            string      `json:"waterLevel,omitempty" bson:"waterLevel,omitempty"`
 
-	// WateringFrequencyDays is user-set at creation (the Add Plant
-	// screen's "Water every (days)" field) - unlike fertilizing, watering
-	// cadence is not derived from the roadmap.
-	WateringFrequencyDays int        `json:"wateringFrequencyDays" bson:"wateringFrequencyDays"`
-	LastWateredAt         *time.Time `json:"lastWatered,omitempty" bson:"lastWateredAt,omitempty"`
-	NextWateringAt        time.Time  `json:"nextWatering" bson:"nextWateringAt"`
-	// WaterLevel is a fixed-English display string ("Today", "Tomorrow",
-	// "In N days") recomputed alongside NextWateringAt - see
-	// usecase/plant/roadmap.go's waterLevelFor for why it's never
-	// localized.
-	WaterLevel string `json:"waterLevel" bson:"waterLevel"`
+	LastFertilizedAt      *time.Time  `json:"lastFertilizedAt,omitempty" bson:"lastFertilizedAt,omitempty"`
+	NextFertilizingAt     *time.Time  `json:"nextFertilizingAt,omitempty" bson:"nextFertilizingAt,omitempty"`
 
-	LastFertilizedAt  *time.Time `json:"-" bson:"lastFertilizedAt,omitempty"`
-	NextFertilizingAt *time.Time `json:"-" bson:"nextFertilizingAt,omitempty"`
+	CreatedAt             time.Time   `json:"createdAt" bson:"createdAt"`
+	UpdatedAt             time.Time   `json:"updatedAt" bson:"updatedAt"`
 
-	CreatedAt time.Time `json:"createdAt" bson:"createdAt"`
-	UpdatedAt time.Time `json:"updatedAt" bson:"updatedAt"`
+	// Computed on every read by the plant service (see health.go); never stored.
+	Health                int            `json:"health" bson:"-"`
+	HealthState           string         `json:"healthState" bson:"-"`
+	HealthReasons         []HealthReason `json:"healthReasons" bson:"-"`
+	LastScan              *LastScan      `json:"lastScan,omitempty" bson:"-"`
+}
+
+// MarshalJSON includes field aliases expected by Flutter client models:
+// _id, nickname, species, lastWatered, nextWatering.
+func (p *Plant) MarshalJSON() ([]byte, error) {
+	type Alias Plant
+	return json.Marshal(&struct {
+		*Alias
+		AltID           string     `json:"_id"`
+		AltNickname     string     `json:"nickname"`
+		AltSpecies      string     `json:"species"`
+		AltLastWatered  *time.Time `json:"lastWatered,omitempty"`
+		AltNextWatering time.Time  `json:"nextWatering"`
+	}{
+		Alias:           (*Alias)(p),
+		AltID:           p.ID,
+		AltNickname:     p.Name,
+		AltSpecies:      p.Type,
+		AltLastWatered:  p.LastWateredAt,
+		AltNextWatering: p.NextWateringAt,
+	})
+}
+
+// IdentificationResult is what an AI botanist returns when identifying a plant photo.
+type IdentificationResult struct {
+	Species               string `json:"species"`
+	SuggestedNickname     string `json:"suggestedNickname"`
+	Location              string `json:"location"`
+	Sunlight              string `json:"sunlight"`
+	WateringFrequencyDays int    `json:"wateringFrequencyDays"`
+	WaterAmountMl         int    `json:"waterAmountMl"`
+	Health                int    `json:"health"`
+	CareTips              string `json:"careTips"`
 }

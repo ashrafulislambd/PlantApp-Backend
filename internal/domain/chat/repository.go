@@ -13,4 +13,12 @@ import "context"
 type Repository interface {
 	Create(ctx context.Context, m *Message) error
 	ListBySession(ctx context.Context, userID, sessionID string) ([]*Message, error)
+
+	// ListSessions returns one Session per conversation the user has, most
+	// recently active first. It never returns nil.
+	ListSessions(ctx context.Context, userID string) ([]*Session, error)
+
+	// DeleteSession removes every message of the user's session. It returns
+	// apperr.ErrNotFound when the user has no such session.
+	DeleteSession(ctx context.Context, userID, sessionID string) error
 }
