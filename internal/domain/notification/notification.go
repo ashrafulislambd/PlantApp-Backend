@@ -19,8 +19,26 @@ type Device struct {
 Token     string    `json:"token" bson:"_id"`
 UserID    string    `json:"-" bson:"userId"`
 Platform  string    `json:"platform" bson:"platform"`
+// Timezone (IANA name) and UTCOffsetMinutes tell where the device is, so
+// reminders respect the owner's local night. Both are optional.
+Timezone         string `json:"timezone,omitempty" bson:"timezone,omitempty"`
+UTCOffsetMinutes *int   `json:"utcOffsetMinutes,omitempty" bson:"utcOffsetMinutes,omitempty"`
 CreatedAt time.Time `json:"createdAt" bson:"createdAt"`
 UpdatedAt time.Time `json:"updatedAt" bson:"updatedAt"`
+}
+
+// Location returns the device's time zone: the IANA name when it is valid,
+// else the fixed UTC offset, else UTC.
+func (d Device) Location() *time.Location {
+if d.Timezone != "" {
+if loc, err := time.LoadLocation(d.Timezone); err == nil {
+return loc
+}
+}
+if d.UTCOffsetMinutes != nil && *d.UTCOffsetMinutes >= -14*60 && *d.UTCOffsetMinutes <= 14*60 {
+return time.FixedZone("device", *d.UTCOffsetMinutes*60)
+}
+return time.UTC
 }
 
 type Message struct {

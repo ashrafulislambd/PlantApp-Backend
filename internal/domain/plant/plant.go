@@ -1,4 +1,4 @@
-﻿// Package plant holds the Plant entity and its repository contract.
+// Package plant holds the Plant entity and its repository contract.
 // It models the "Maintainance" screens: a user registers a plant and
 // receives a generated watering/fertilizer care roadmap, then logs
 // waterings/fertilizings and gets reminders when the next one is due.
@@ -25,6 +25,9 @@ type Plant struct {
 	AgeStage              string      `json:"ageStage" bson:"ageStage"`
 	Location              string      `json:"location,omitempty" bson:"location,omitempty"`
 	Sunlight              string      `json:"sunlight,omitempty" bson:"sunlight,omitempty"`
+	// Outdoor is true for plants that live outside (garden, balcony): they get
+	// the weather-aware tips (e.g. "raining: skip watering"). Default: indoor.
+	Outdoor               bool        `json:"outdoor" bson:"outdoor"`
 	WateringFrequencyDays int         `json:"wateringFrequencyDays,omitempty" bson:"wateringFrequencyDays,omitempty"`
 	ImageKey              string      `json:"imageKey,omitempty" bson:"imageKey,omitempty"`
 	ImageURL              string      `json:"image,omitempty" bson:"imageUrl,omitempty"`
@@ -37,6 +40,12 @@ type Plant struct {
 
 	CreatedAt time.Time `json:"createdAt" bson:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt" bson:"updatedAt"`
+
+	// Computed on every read by the plant service (see health.go); never stored.
+	Health        int            `json:"health" bson:"-"`
+	HealthState   string         `json:"healthState" bson:"-"`
+	HealthReasons []HealthReason `json:"healthReasons" bson:"-"`
+	LastScan      *LastScan      `json:"lastScan,omitempty" bson:"-"`
 }
 
 // IdentificationResult is what an AI botanist returns when identifying a plant photo.

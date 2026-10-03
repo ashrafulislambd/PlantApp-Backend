@@ -169,3 +169,47 @@ func TestAnalyze_ChatRecordingFailureDoesNotLoseTheDiagnosis(t *testing.T) {
 		t.Fatalf("Analyze() = %v, %v; want the diagnosis despite the recorder failing", d, err)
 	}
 }
+
+func TestAnalyze_HealthyPlantKeepsSeverityNone(t *testing.T) {
+	svc := newTestService(stubProvider{result: diagnosis.AnalysisResult{
+		Issue: "Your plant looks healthy.", Cure: "Keep going.", Severity: "None",
+	}})
+	d, err := svc.Analyze(context.Background(), AnalyzeInput{UserID: "user_1", ImageData: []byte{1, 2, 3}})
+	if err != nil {
+		t.Fatalf("Analyze() error = %v", err)
+	}
+	if !d.IsHealthy() {
+		t.Errorf("Severity = %q, want %q", d.Severity, diagnosis.SeverityNone)
+	}
+}
+
+func TestMarkTreated(t *testing.T) {
+	svc := newTestService(stubProvider{result: diagnosis.AnalysisResult{Issue: "x", Cure: "y", Severity: "Mild"}})
+	d, err := svc.Analyze(context.Background(), AnalyzeInput{UserID: "user_1", ImageData: []byte{1}})
+	if err != nil {
+		t.Fatalf("Analyze() error = %v", err)
+	}
+	if d.Treated {
+		t.Fatal("new scan must not be treated")
+	}
+
+	got, err := svc.MarkTreated(context.Background(), d.ID, "user_1")
+	if err != nil {
+		t.Fatalf("MarkTreated() error = %v", err)
+	}
+	if !got.Treated || got.TreatedAt == nil {
+		t.Fatalf("MarkTreated() = %+v, want treated with a timestamp", got)
+	}
+
+	again, err := svc.MarkTreated(context.Background(), d.ID, "user_1")
+	if err != nil {
+		t.Fatalf("second MarkTreated() error = %v", err)
+	}
+	if !again.TreatedAt.Equal(*got.TreatedAt) {
+		t.Error("marking twice must keep the original TreatedAt")
+	}
+
+	if _, err := svc.MarkTreated(context.Background(), d.ID, "someone_else"); !errors.Is(err, apperr.ErrNotFound) {
+		t.Errorf("other user's MarkTreated error = %v, want ErrNotFound", err)
+	}
+}

@@ -197,6 +197,17 @@ return
 respond.JSON(w, http.StatusOK, presentDiagnosis(*d, reqlocale.Resolve(r)))
 }
 
+// MarkTreated flags a scan as treated (POST /diagnoses/{id}/treated).
+func (h *DiagnosisHandler) MarkTreated(w http.ResponseWriter, r *http.Request) {
+userID, _ := authmw.UserID(r.Context())
+d, err := h.svc.MarkTreated(r.Context(), r.PathValue("id"), userID)
+if err != nil {
+respond.Error(w, err)
+return
+}
+respond.JSON(w, http.StatusOK, presentDiagnosis(*d, reqlocale.Resolve(r)))
+}
+
 // Image streams the photo saved with a diagnosis (Bearer auth required).
 func (h *DiagnosisHandler) Image(w http.ResponseWriter, r *http.Request) {
 userID, _ := authmw.UserID(r.Context())

@@ -21,12 +21,17 @@ type ChatRecorder interface {
 	RecordScan(ctx context.Context, userID, sessionID, note string, d *diagnosis.Diagnosis, lang string) error
 }
 
+type PlantEventRecorder interface {
+	RecordScanEvent(ctx context.Context, userID, plantID, imageURL, note string, metadata map[string]any) error
+}
+
 type Service struct {
 	repo     diagnosis.Repository
 	provider diagnosis.Provider
 	ids      idgen.Generator
 	images   diagnosis.ImageStore // optional; nil means photos are not kept
 	chat     ChatRecorder         // optional; nil means scans never reach chat history
+	events   PlantEventRecorder   // optional; nil means scans aren't added to plant history
 }
 
 func NewService(repo diagnosis.Repository, provider diagnosis.Provider, ids idgen.Generator) *Service {
@@ -39,6 +44,8 @@ func (s *Service) SetImageStore(store diagnosis.ImageStore) { s.images = store }
 // SetChatRecorder lets a scan sent from the chat (AnalyzeInput.SessionID) be
 // recorded in that chat session.
 func (s *Service) SetChatRecorder(r ChatRecorder) { s.chat = r }
+
+func (s *Service) SetPlantEventRecorder(r PlantEventRecorder) { s.events = r }
 
 type AnalyzeInput struct {
 	UserID      string
@@ -94,7 +101,7 @@ func (s *Service) Analyze(ctx context.Context, in AnalyzeInput) (*diagnosis.Diag
 		Issue:        result.Issue,
 		Cure:         result.Cure,
 		Confidence:   result.Confidence,
-		Severity:     result.Severity,
+		Severity:     diagnosis.NormalizeSeverity(result.Severity),
 		Fertilizer:   result.Fertilizer,
 		Disclaimer:   diagnosis.Disclaimer,
 		IssueBn:      result.IssueBn,
@@ -124,6 +131,16 @@ func (s *Service) Analyze(ctx context.Context, in AnalyzeInput) (*diagnosis.Diag
 		}
 		return nil, err
 	}
+	if d.PlantID != nil && s.events != nil {
+		imageURL := ""
+		if d.ImageKey != "" {
+			imageURL = "/api/v1/diagnoses/" + d.ID + "/image"
+		}
+		metadata := map[string]any{"diagnosisId": d.ID, "issue": d.Issue, "severity": d.Severity}
+		if err := s.events.RecordScanEvent(ctx, in.UserID, *d.PlantID, imageURL, note, metadata); err != nil {
+			log.Printf("diagnosis: recording scan %s in plant events failed: %v", d.ID, err)
+		}
+	}
 
 	// The photo and the Diagnosis are saved exactly once, above. Recording
 	// the chat turns only adds references to them (DiagnosisID). A failure
@@ -139,6 +156,15 @@ func (s *Service) Analyze(ctx context.Context, in AnalyzeInput) (*diagnosis.Diag
 
 func (s *Service) Get(ctx context.Context, id, userID string) (*diagnosis.Diagnosis, error) {
 	return s.repo.GetByID(ctx, id, userID)
+}
+
+// MarkTreated flags one of userID's scans as treated ("Mark treated" on the
+// plant details screen). It is idempotent.
+func (s *Service) MarkTreated(ctx context.Context, id, userID string) (*diagnosis.Diagnosis, error) {
+	if strings.TrimSpace(id) == "" {
+		return nil, fmt.Errorf("%w: id is required", apperr.ErrInvalidInput)
+	}
+	return s.repo.MarkTreated(ctx, id, userID, time.Now().UTC())
 }
 
 func (s *Service) List(ctx context.Context, userID string, plantID *string) ([]*diagnosis.Diagnosis, error) {

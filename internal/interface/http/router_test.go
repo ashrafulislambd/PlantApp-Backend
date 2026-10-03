@@ -30,6 +30,7 @@ func newTestRouter() http.Handler {
 	ids := idgen.New()
 
 	plantRepo := memory.NewPlantRepository()
+	plantEvents := memory.NewPlantEventRepository()
 	fertilizerRepo := memory.NewFertilizerRepository(seed.Fertilizers()...)
 	diagnosisRepo := memory.NewDiagnosisRepository()
 	chatRepo := memory.NewChatRepository()
@@ -43,10 +44,15 @@ func newTestRouter() http.Handler {
 		}
 	}
 
+	plantService := plantuc.NewService(plantRepo, ids)
+	plantService.SetEventRepository(plantEvents)
+	diagnosisService := diagnosisuc.NewService(diagnosisRepo, ai.NewMockDiagnosisProvider(), ids)
+	diagnosisService.SetPlantEventRecorder(plantService)
+
 	deps := v1.Dependencies{
-		PlantService:      plantuc.NewService(plantRepo, ids),
+		PlantService:      plantService,
 		FertilizerService: fertilizeruc.NewService(fertilizerRepo, ids),
-		DiagnosisService:  diagnosisuc.NewService(diagnosisRepo, ai.NewMockDiagnosisProvider(), ids),
+		DiagnosisService:  diagnosisService,
 		ChatService:       chatuc.NewService(chatRepo, ai.NewMockChatReplyProvider(), ids),
 		ProductService:    productuc.NewService(productRepo, nil),
 		OrderService:      orderuc.NewService(orderRepo, productRepo, ids),
@@ -243,6 +249,63 @@ func TestPlants_Get_NotFound(t *testing.T) {
 	rec, _ := doRequest(t, router, http.MethodGet, "/api/v1/plants/does-not-exist", "", nil)
 	if rec.Code != http.StatusNotFound {
 		t.Errorf("status = %d, want %d", rec.Code, http.StatusNotFound)
+	}
+}
+
+func TestPlants_CarePointsSkipNotesAndEvents(t *testing.T) {
+	router := newTestRouter()
+	createdRec, createdEnv := doRequest(t, router, http.MethodPost, "/api/v1/plants", "", map[string]any{
+		"name": "Fern", "type": "Tropical", "wateringFrequencyDays": 5,
+	})
+	if createdRec.Code != http.StatusCreated {
+		t.Fatalf("create status = %d, body: %s", createdRec.Code, createdRec.Body.String())
+	}
+	var created map[string]any
+	if err := json.Unmarshal(createdEnv.Data, &created); err != nil {
+		t.Fatal(err)
+	}
+	id := created["id"].(string)
+
+	waterRec, waterEnv := doRequest(t, router, http.MethodPost, "/api/v1/plants/"+id+"/water", "", nil)
+	if waterRec.Code != http.StatusOK {
+		t.Fatalf("water status = %d, body: %s", waterRec.Code, waterRec.Body.String())
+	}
+	var waterResult map[string]any
+	if err := json.Unmarshal(waterEnv.Data, &waterResult); err != nil {
+		t.Fatal(err)
+	}
+	if waterResult["pointsEarned"] != float64(10) || waterResult["plant"] == nil {
+		t.Fatalf("water response = %#v, want plant and 10 server points", waterResult)
+	}
+
+	skipRec, _ := doRequest(t, router, http.MethodPost, "/api/v1/plants/"+id+"/skip", "", map[string]any{
+		"reason": "rained", "days": 2,
+	})
+	if skipRec.Code != http.StatusOK {
+		t.Fatalf("skip status = %d, body: %s", skipRec.Code, skipRec.Body.String())
+	}
+	_, _ = doRequest(t, router, http.MethodPost, "/api/v1/plants/"+id+"/notes", "", map[string]string{"note": "Leaves look healthy"})
+	_, scanEnv := doRequest(t, router, http.MethodPost, "/api/v1/diagnoses", "", map[string]any{
+		"plantId": id, "imageBase64": base64.StdEncoding.EncodeToString([]byte("fake image")),
+	})
+	if len(scanEnv.Data) == 0 {
+		t.Fatal("linked scan response is empty")
+	}
+
+	feedRec, feedEnv := doRequest(t, router, http.MethodGet, "/api/v1/plants/events", "", nil)
+	if feedRec.Code != http.StatusOK {
+		t.Fatalf("garden events status = %d, body: %s", feedRec.Code, feedRec.Body.String())
+	}
+	var feed []map[string]any
+	if err := json.Unmarshal(feedEnv.Data, &feed); err != nil {
+		t.Fatal(err)
+	}
+	if len(feed) != 4 {
+		t.Fatalf("garden event count = %d, want 4", len(feed))
+	}
+	plantRec, plantEnv := doRequest(t, router, http.MethodGet, "/api/v1/plants/"+id+"/events", "", nil)
+	if plantRec.Code != http.StatusOK || len(plantEnv.Data) == 0 {
+		t.Fatalf("plant events status = %d, data = %s", plantRec.Code, plantEnv.Data)
 	}
 }
 

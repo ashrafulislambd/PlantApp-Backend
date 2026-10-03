@@ -4,6 +4,7 @@ import (
 	"context"
 	"sort"
 	"sync"
+	"time"
 
 	"plantpal-backend/internal/domain/apperr"
 	"plantpal-backend/internal/domain/diagnosis"
@@ -33,6 +34,22 @@ func (r *DiagnosisRepository) GetByID(_ context.Context, id, userID string) (*di
 		return nil, apperr.ErrNotFound
 	}
 	return d, nil
+}
+
+func (r *DiagnosisRepository) MarkTreated(_ context.Context, id, userID string, at time.Time) (*diagnosis.Diagnosis, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	d, ok := r.items[id]
+	if !ok || d.UserID != userID {
+		return nil, apperr.ErrNotFound
+	}
+	if !d.Treated {
+		d.Treated = true
+		t := at
+		d.TreatedAt = &t
+	}
+	cp := *d
+	return &cp, nil
 }
 
 func (r *DiagnosisRepository) List(_ context.Context, userID string, plantID *string) ([]*diagnosis.Diagnosis, error) {

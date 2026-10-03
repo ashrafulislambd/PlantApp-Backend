@@ -33,6 +33,11 @@ type Diagnosis struct {
 	CreatedAt  time.Time `json:"createdAt" bson:"createdAt"`
 	Provider   string    `json:"provider,omitempty" bson:"provider,omitempty"`
 
+	// Treated is set by the user ("Mark treated") once they acted on the
+	// advice. A treated scan no longer lowers the plant's health.
+	Treated   bool       `json:"treated" bson:"treated"`
+	TreatedAt *time.Time `json:"treatedAt,omitempty" bson:"treatedAt,omitempty"`
+
 	IssueBn      string `json:"-" bson:"issueBn,omitempty"`
 	CureBn       string `json:"-" bson:"cureBn,omitempty"`
 	DisclaimerBn string `json:"-" bson:"disclaimerBn,omitempty"`
@@ -41,6 +46,29 @@ ImageKey         string `json:"-" bson:"imageKey,omitempty"`
 ImageContentType string `json:"-" bson:"imageContentType,omitempty"`
 ImageURL         string `json:"imageUrl,omitempty" bson:"-"`
 }
+
+// SeverityNone is the severity of a scan that found nothing wrong ("healthy").
+const SeverityNone = "none"
+
+// NormalizeSeverity maps whatever a provider returned onto one of
+// "Mild", "Moderate", "Severe" or SeverityNone. Unknown or empty values
+// become "Mild" so that a real issue is never silently treated as healthy;
+// only an explicit none/healthy answer yields SeverityNone.
+func NormalizeSeverity(s string) string {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "none", "healthy", "no issue", "no_issue":
+		return SeverityNone
+	case "moderate", "medium":
+		return "Moderate"
+	case "severe", "high", "critical":
+		return "Severe"
+	default:
+		return "Mild"
+	}
+}
+
+// IsHealthy reports whether the scan found nothing wrong.
+func (d Diagnosis) IsHealthy() bool { return d.Severity == SeverityNone }
 
 // Localized returns a copy with Issue/Cure/Disclaimer swapped for their
 // Bengali translation when lang is "bn" and a translation exists.

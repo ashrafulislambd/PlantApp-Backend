@@ -18,13 +18,14 @@ import (
 const defaultVisionModel = "qwen/qwen3.8-27b"
 
 const diagnosisPrompt = `You are a plant pathologist. Look at this photo of a plant and identify ` +
-	`the single most likely issue (disease, pest, or nutrient deficiency) and a practical cure.
+	`the single most likely issue (disease, pest, or nutrient deficiency) and a practical cure. ` +
+	`If the plant looks healthy and you see no real problem, say so: do not invent an issue.
 Reply ONLY as valid JSON with exactly these keys:
 {
-  "issue": "<short description of the problem in English>",
-  "cure": "<short, actionable treatment in English>",
+  "issue": "<short description of the problem in English; for a healthy plant: Your plant looks healthy>",
+  "cure": "<short, actionable treatment in English; for a healthy plant, one short care tip>",
   "confidence": "High|Moderate|Low",
-  "severity": "Mild|Moderate|Severe",
+  "severity": "None|Mild|Moderate|Severe",
   "fertilizer": "<a short fertilizer or nutrient suggestion, or empty string if not applicable>",
   "issueBn": "<short description of the problem translated into natural Bengali/বাংলা>",
   "cureBn": "<short, actionable treatment translated into natural Bengali/বাংলা>"

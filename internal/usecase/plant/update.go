@@ -1,4 +1,4 @@
-﻿package plant
+package plant
 
 import (
 	"context"
@@ -13,12 +13,17 @@ import (
 type UpdateInput struct {
 	Name, Type, AgeStage  *string
 	Location, Sunlight    *string
+	Outdoor               *bool
 	WateringFrequencyDays *int
 	Lang                  string
 }
 
 // Update edits name/type/age-stage/location/sunlight/watering-frequency.
-// Changing Type or AgeStage regenerates the roadmap and recomputes the next-due times, same as Create.
+//
+// The care roadmap (and the fertilizing schedule) is regenerated only when
+// Type or AgeStage really changed. Changing the watering interval re-anchors
+// the next watering on LastWateredAt, never on "now"; a plant that was never
+// watered keeps its due date.
 func (s *Service) Update(ctx context.Context, id, userID string, in UpdateInput) (*plant.Plant, error) {
 	p, err := s.repo.GetByID(ctx, id, userID)
 	if err != nil {
@@ -33,10 +38,18 @@ func (s *Service) Update(ctx context.Context, id, userID string, in UpdateInput)
 		p.Name = name
 	}
 	if in.Type != nil {
-		p.Type, regenerate = strings.TrimSpace(*in.Type), true
+		t := strings.TrimSpace(*in.Type)
+		if !strings.EqualFold(t, p.Type) {
+			regenerate = true
+		}
+		p.Type = t
 	}
 	if in.AgeStage != nil {
-		p.AgeStage, regenerate = strings.TrimSpace(*in.AgeStage), true
+		a := strings.TrimSpace(*in.AgeStage)
+		if !strings.EqualFold(a, p.AgeStage) {
+			regenerate = true
+		}
+		p.AgeStage = a
 	}
 	if in.Location != nil {
 		p.Location = strings.TrimSpace(*in.Location)
@@ -44,15 +57,21 @@ func (s *Service) Update(ctx context.Context, id, userID string, in UpdateInput)
 	if in.Sunlight != nil {
 		p.Sunlight = strings.TrimSpace(*in.Sunlight)
 	}
+	if in.Outdoor != nil {
+		p.Outdoor = *in.Outdoor
+	}
 	now := time.Now().UTC()
-	if in.WateringFrequencyDays != nil && *in.WateringFrequencyDays > 0 {
+	if in.WateringFrequencyDays != nil && *in.WateringFrequencyDays > 0 && *in.WateringFrequencyDays != p.WateringFrequencyDays {
 		p.WateringFrequencyDays = *in.WateringFrequencyDays
-		p.NextWateringAt = now.AddDate(0, 0, *in.WateringFrequencyDays)
+		if p.LastWateredAt != nil {
+			p.NextWateringAt = scheduleNextWatering(ctx, p, *p.LastWateredAt)
+		}
+		// never watered: keep the existing due date
 	}
 	if regenerate {
 		p.CareRoadmap = buildRoadmap(p.Type, p.AgeStage, in.Lang)
-		if p.WateringFrequencyDays <= 0 {
-			p.NextWateringAt = nextWateringTime(p.CareRoadmap.WateringTimes, now)
+		if p.WateringFrequencyDays <= 0 && p.LastWateredAt != nil {
+			p.NextWateringAt = scheduleNextWatering(ctx, p, *p.LastWateredAt)
 		}
 		setNextFertilizing(p, now)
 	}
@@ -60,5 +79,5 @@ func (s *Service) Update(ctx context.Context, id, userID string, in UpdateInput)
 	if err := s.repo.Update(ctx, p); err != nil {
 		return nil, err
 	}
-	return p, nil
+	return s.withHealth(ctx, p), nil
 }

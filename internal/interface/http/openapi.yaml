@@ -13,6 +13,15 @@ info:
     value (or no header) returns English. This only affects
     server-generated/seeded text, not user-submitted content (e.g. a
     fertilizer a user adds themselves).
+
+
+    Time zone: clients may send `X-UTC-Offset-Minutes` (e.g. `360` for UTC+6)
+    or `X-Timezone` (IANA name, e.g. `Asia/Dhaka`; wins when both are sent).
+    It is used where a clock time must mean the user's local time, such as the
+    roadmap watering times when a plant has no watering interval. Without it
+    the server uses UTC. Push devices (`POST /api/v1/devices`) may also send
+    `timezone` and/or `utcOffsetMinutes`; reminders are not pushed to a device
+    between 22:00 and 07:00 local time and are sent after that instead.
   version: "1.0.0"
 servers:
   - url: /
@@ -128,6 +137,194 @@ paths:
       responses:
         "204":
           description: No Content
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Plants]
+      summary: Edit a plant
+      description: |
+        Only the fields that are sent change. The care roadmap and fertilizing
+        schedule are regenerated only when `type` or `ageStage` actually
+        changed. Changing `wateringFrequencyDays` re-anchors the next watering
+        on `lastWateredAt` (never on "now"); a plant that was never watered
+        keeps its due date.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePlantRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Plant"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/plants/{id}/water:
+    parameters:
+      - $ref: "#/components/parameters/PlantId"
+    post:
+      tags: [Plants]
+      summary: Log a watering now
+      description: |
+        Sets `lastWateredAt` to now and `nextWateringAt` to now +
+        `wateringFrequencyDays`. The roadmap clock times are only used when the
+        interval is 0.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    required: [plant, pointsEarned]
+                    properties:
+                      plant:
+                        $ref: "#/components/schemas/Plant"
+                      pointsEarned:
+                        type: integer
+                        description: Points awarded by the server for a due watering; zero otherwise.
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/plants/{id}/fertilize:
+    parameters:
+      - $ref: "#/components/parameters/PlantId"
+    post:
+      tags: [Plants]
+      summary: Log a fertilizing now
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    required: [plant, pointsEarned]
+                    properties:
+                      plant:
+                        $ref: "#/components/schemas/Plant"
+                      pointsEarned:
+                        type: integer
+                        description: Points awarded by the server for due fertilizing; zero otherwise.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/plants/{id}/skip:
+    parameters:
+      - $ref: "#/components/parameters/PlantId"
+    post:
+      tags: [Plants]
+      summary: Skip or snooze a watering reminder
+      description: Reschedules the next watering without changing lastWateredAt or penalizing health.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  enum: [soil_still_wet, rained, other]
+                days:
+                  type: integer
+                  minimum: 1
+                  maximum: 30
+                  default: 1
+      responses:
+        "200":
+          description: Updated plant schedule
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Plant"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/plants/{id}/notes:
+    parameters:
+      - $ref: "#/components/parameters/PlantId"
+    post:
+      tags: [Plants]
+      summary: Add a note to plant history
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [note]
+              properties:
+                note:
+                  type: string
+                  maxLength: 1000
+      responses:
+        "201":
+          description: Note recorded
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/plants/events:
+    get:
+      tags: [Plants]
+      summary: List the signed-in user's garden events
+      responses:
+        "200":
+          description: Newest-first event feed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PlantEvent"
+
+  /api/v1/plants/{id}/events:
+    parameters:
+      - $ref: "#/components/parameters/PlantId"
+    get:
+      tags: [Plants]
+      summary: List events for one plant
+      responses:
+        "200":
+          description: Newest-first event feed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PlantEvent"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -252,6 +449,28 @@ paths:
     get:
       tags: [Diagnoses]
       summary: Get a diagnosis by ID
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Diagnosis"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/diagnoses/{id}/treated:
+    parameters:
+      - $ref: "#/components/parameters/DiagnosisId"
+    post:
+      tags: [Diagnoses]
+      summary: Mark a diagnosis as treated
+      description: >
+        The user acted on the advice. Idempotent: marking again keeps the
+        first `treatedAt`. No request body.
       responses:
         "200":
           description: OK
@@ -456,12 +675,133 @@ components:
         ageStage:
           type: string
           example: mature
+        location:
+          type: string
+        sunlight:
+          type: string
+        outdoor:
+          type: boolean
+          description: True for a plant that lives outside (garden, balcony). Default false (indoor).
+        wateringFrequencyDays:
+          type: integer
+          description: The user's watering interval. Drives the schedule.
+          example: 5
+        image:
+          type: string
+          description: Relative URL of the plant photo.
         careRoadmap:
           $ref: "#/components/schemas/CareRoadmap"
+        lastWateredAt:
+          type: string
+          format: date-time
+          description: Absent if the plant was never watered.
+        nextWateringAt:
+          type: string
+          format: date-time
+        lastFertilizedAt:
+          type: string
+          format: date-time
+        nextFertilizingAt:
+          type: string
+          format: date-time
+        health:
+          type: integer
+          minimum: 10
+          maximum: 100
+          description: |
+            Computed on every read, never stored. `100 - penalties`, clamped
+            to 10..100. Watering overdue: 1 day grace, then -12 per further
+            day (cap -70). Fertilizing overdue: 3 days grace, then -5 per
+            started week (cap -15). Latest scan: Mild -10, Moderate -25,
+            Severe -45; full for 7 days, half for days 8-14, none afterwards.
+          example: 76
+        healthState:
+          type: string
+          enum: [thriving, okay, needs_care, critical]
+          description: thriving >= 85, okay 65-84, needs_care 40-64, critical < 40.
+        healthReasons:
+          type: array
+          description: Why the score is below 100. Empty when nothing is wrong.
+          items:
+            $ref: "#/components/schemas/HealthReason"
+        lastScan:
+          $ref: "#/components/schemas/PlantLastScan"
         createdAt:
           type: string
           format: date-time
         updatedAt:
+          type: string
+          format: date-time
+
+    PlantEvent:
+      type: object
+      required: [id, plantId, userId, eventType, points, createdAt]
+      properties:
+        id:
+          type: string
+        plantId:
+          type: string
+        userId:
+          type: string
+        eventType:
+          type: string
+          enum: [water, fertilize, scan, skip, note]
+        reason:
+          type: string
+        note:
+          type: string
+        points:
+          type: integer
+        imageUrl:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+
+    HealthReason:
+      type: object
+      required: [code, impact]
+      description: The client localises `code`; the server sends no display text.
+      properties:
+        code:
+          type: string
+          enum: [water_late, fertilizer_late, scan_issue]
+        value:
+          type: integer
+          description: Whole days late (water_late, fertilizer_late).
+          example: 3
+        detail:
+          type: string
+          description: The scan issue text (scan_issue). English only for now.
+        severity:
+          type: string
+          enum: [mild, moderate, severe]
+          description: Scan severity (scan_issue).
+        impact:
+          type: integer
+          description: Points taken off the score (a negative number).
+          example: -24
+
+    PlantLastScan:
+      type: object
+      nullable: true
+      description: The most recent AI Doctor scan saved against this plant. Absent if none.
+      properties:
+        issue:
+          type: string
+        id:
+          type: string
+          description: The diagnosis id (use it with `POST /diagnoses/{id}/treated`).
+        severity:
+          type: string
+          description: Mild, Moderate, Severe, or none.
+        treated:
+          type: boolean
+          description: The user marked the scan as treated; it no longer lowers health.
+        at:
           type: string
           format: date-time
 
@@ -477,8 +817,53 @@ components:
           example: Water based
         ageStage:
           type: string
-          enum: [seed, seedling, mature, adult]
+          description: Free text; seed/seedling, young and mature/adult are the known stages.
           example: mature
+        location:
+          type: string
+        sunlight:
+          type: string
+        outdoor:
+          type: boolean
+          description: Optional. True for a plant that lives outside. Default false.
+        wateringFrequencyDays:
+          type: integer
+          example: 5
+        waterAmountMl:
+          type: integer
+          description: Optional (max 5000). Replaces the generated `careRoadmap.waterAmountMl`, e.g. the value from AI identify.
+          example: 250
+        careTips:
+          type: string
+          maxLength: 1000
+          description: Optional. Replaces the generated `careRoadmap.tips`.
+        lastWateredAt:
+          type: string
+          format: date-time
+          description: |
+            When the plant was last watered. If sent, `nextWateringAt` is
+            `lastWateredAt + wateringFrequencyDays`. If omitted, the plant is
+            treated as not watered and is due right now.
+
+    UpdatePlantRequest:
+      type: object
+      description: All fields optional; only the ones sent change.
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        ageStage:
+          type: string
+        location:
+          type: string
+        sunlight:
+          type: string
+        outdoor:
+          type: boolean
+          description: Optional. Omit to keep the current value.
+        wateringFrequencyDays:
+          type: integer
 
     Fertilizer:
       type: object
@@ -524,6 +909,19 @@ components:
         cure:
           type: string
           example: Use Triple Superphosphate (TSP) or Single Superphosphate (SSP).
+        severity:
+          type: string
+          enum: [none, Mild, Moderate, Severe]
+          description: >
+            `none` means the AI found nothing wrong (a healthy plant). Mild,
+            Moderate and Severe lower the plant's health score.
+        treated:
+          type: boolean
+          description: Set by `POST /diagnoses/{id}/treated`. A treated scan no longer lowers plant health.
+        treatedAt:
+          type: string
+          format: date-time
+          nullable: true
         disclaimer:
           type: string
         createdAt:

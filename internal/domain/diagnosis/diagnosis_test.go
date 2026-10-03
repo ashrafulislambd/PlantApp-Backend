@@ -51,3 +51,24 @@ func TestNoteHint(t *testing.T) {
 		t.Errorf("hint = %q, want the note quoted/escaped and flagged as a hint", got)
 	}
 }
+
+func TestNormalizeSeverity(t *testing.T) {
+	cases := map[string]string{
+		"Mild": "Mild", "moderate": "Moderate", " SEVERE ": "Severe",
+		"None": SeverityNone, "healthy": SeverityNone, "": "Mild", "weird": "Mild",
+	}
+	for in, want := range cases {
+		if got := NormalizeSeverity(in); got != want {
+			t.Errorf("NormalizeSeverity(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestIsHealthy(t *testing.T) {
+	if !(Diagnosis{Severity: SeverityNone}).IsHealthy() {
+		t.Error("severity none should be healthy")
+	}
+	if (Diagnosis{Severity: "Mild"}).IsHealthy() {
+		t.Error("severity Mild should not be healthy")
+	}
+}

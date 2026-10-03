@@ -1,4 +1,4 @@
-﻿package v1
+package v1
 
 import (
 	"encoding/base64"
@@ -7,10 +7,13 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"plantpal-backend/internal/domain/apperr"
+	"plantpal-backend/internal/domain/plant"
 	"plantpal-backend/internal/interface/http/authmw"
 	"plantpal-backend/internal/interface/http/reqlocale"
+	"plantpal-backend/internal/interface/http/reqtz"
 	"plantpal-backend/internal/interface/http/respond"
 	plantuc "plantpal-backend/internal/usecase/plant"
 )
@@ -33,7 +36,14 @@ type createPlantRequest struct {
 	AgeStage              string `json:"ageStage"`
 	Location              string `json:"location"`
 	Sunlight              string `json:"sunlight"`
+	Outdoor               bool   `json:"outdoor"`
 	WateringFrequencyDays int    `json:"wateringFrequencyDays"`
+	// LastWateredAt (RFC3339) is optional; omitted means the plant is due now.
+	LastWateredAt *time.Time `json:"lastWateredAt,omitempty"`
+	// WaterAmountMl and CareTips are optional AI-identify values stored in
+	// the care roadmap.
+	WaterAmountMl int    `json:"waterAmountMl,omitempty"`
+	CareTips      string `json:"careTips,omitempty"`
 }
 
 func (h *PlantHandler) Create(w http.ResponseWriter, r *http.Request) {
@@ -44,21 +54,26 @@ func (h *PlantHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userID, _ := authmw.UserID(r.Context())
-	p, err := h.svc.Create(r.Context(), plantuc.CreateInput{
+	ctx := plant.ContextWithLocation(r.Context(), reqtz.Resolve(r))
+	p, err := h.svc.Create(ctx, plantuc.CreateInput{
 		UserID:                userID,
 		Name:                  req.Name,
 		Type:                  req.Type,
 		AgeStage:              req.AgeStage,
 		Location:              req.Location,
 		Sunlight:              req.Sunlight,
+		Outdoor:               req.Outdoor,
 		WateringFrequencyDays: req.WateringFrequencyDays,
+		LastWateredAt:         req.LastWateredAt,
+		WaterAmountMl:         req.WaterAmountMl,
+		CareTips:              req.CareTips,
 		Lang:                  reqlocale.Resolve(r),
 	})
 	if err != nil {
 		respond.Error(w, err)
 		return
 	}
-	respond.JSON(w, http.StatusCreated, p)
+	respond.JSON(w, http.StatusCreated, p.Localized(reqlocale.Resolve(r)))
 }
 
 func (h *PlantHandler) List(w http.ResponseWriter, r *http.Request) {
@@ -68,7 +83,7 @@ func (h *PlantHandler) List(w http.ResponseWriter, r *http.Request) {
 		respond.Error(w, err)
 		return
 	}
-	respond.JSON(w, http.StatusOK, items)
+	respond.JSON(w, http.StatusOK, plant.LocalizedAll(items, reqlocale.Resolve(r)))
 }
 
 func (h *PlantHandler) Get(w http.ResponseWriter, r *http.Request) {
@@ -78,7 +93,7 @@ func (h *PlantHandler) Get(w http.ResponseWriter, r *http.Request) {
 		respond.Error(w, err)
 		return
 	}
-	respond.JSON(w, http.StatusOK, p)
+	respond.JSON(w, http.StatusOK, p.Localized(reqlocale.Resolve(r)))
 }
 
 func (h *PlantHandler) Delete(w http.ResponseWriter, r *http.Request) {
@@ -154,7 +169,7 @@ func (h *PlantHandler) UploadImage(w http.ResponseWriter, r *http.Request) {
 		respond.Error(w, err)
 		return
 	}
-	respond.JSON(w, http.StatusOK, p)
+	respond.JSON(w, http.StatusOK, p.Localized(reqlocale.Resolve(r)))
 }
 
 func (h *PlantHandler) Image(w http.ResponseWriter, r *http.Request) {
