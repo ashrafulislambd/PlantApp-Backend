@@ -18,6 +18,12 @@ const (
 	// Reminders that became due longer ago than this are skipped, so a long
 	// outage (or the first deploy) doesn't blast stale pushes.
 	lookback = 24 * time.Hour
+
+	// Quiet hours in the device owner's local time: no reminder pushes from
+	// 22:00 until 07:00. A reminder held back this way is sent on the first tick
+	// after quiet hours end, as long as it is still inside the lookback window.
+	quietFromHour = 22
+	quietToHour   = 7
 )
 
 var platforms = map[string]bool{"android": true, "ios": true, "web": true}
@@ -39,6 +45,13 @@ func NewService(repo notification.Repository, sender notification.Sender, plants
 }
 
 func (s *Service) RegisterDevice(ctx context.Context, userID, token, platform string) error {
+	return s.RegisterDeviceInZone(ctx, userID, token, platform, "", nil)
+}
+
+// RegisterDeviceInZone is RegisterDevice plus where the device is: an IANA
+// time zone name and/or a UTC offset in minutes (both optional, invalid
+// values are ignored).
+func (s *Service) RegisterDeviceInZone(ctx context.Context, userID, token, platform, zone string, offsetMinutes *int) error {
 	token = strings.TrimSpace(token)
 	platform = strings.ToLower(strings.TrimSpace(platform))
 	if userID == "" {
@@ -51,8 +64,16 @@ func (s *Service) RegisterDevice(ctx context.Context, userID, token, platform st
 		return fmt.Errorf("%w: platform must be android, ios or web", apperr.ErrInvalidInput)
 	}
 	now := s.now().UTC()
+	zone = strings.TrimSpace(zone)
+	if _, err := time.LoadLocation(zone); err != nil || len(zone) > 64 || zone == "Local" {
+		zone = ""
+	}
+	if offsetMinutes != nil && (*offsetMinutes < -14*60 || *offsetMinutes > 14*60) {
+		offsetMinutes = nil
+	}
 	if err := s.repo.Upsert(ctx, &notification.Device{
-		Token: token, UserID: userID, Platform: platform, CreatedAt: now, UpdatedAt: now,
+		Token: token, UserID: userID, Platform: platform, Timezone: zone, UTCOffsetMinutes: offsetMinutes,
+		CreatedAt: now, UpdatedAt: now,
 	}); err != nil {
 		return err
 	}
@@ -101,6 +122,22 @@ func (s *Service) SendDueReminders(ctx context.Context) (int, error) {
 	return delivered, nil
 }
 
+// inQuietHours reports whether the local clock reading of t is within quiet hours.
+func inQuietHours(t time.Time) bool {
+	h := t.Hour()
+	return h >= quietFromHour || h < quietToHour
+}
+
+func awakeDevices(devices []*notification.Device, now time.Time) []*notification.Device {
+	out := make([]*notification.Device, 0, len(devices))
+	for _, d := range devices {
+		if !inQuietHours(now.In(d.Location())) {
+			out = append(out, d)
+		}
+	}
+	return out
+}
+
 func inWindow(t, now time.Time) bool {
 	return !t.IsZero() && t.After(now.Add(-lookback)) && !t.After(now)
 }
@@ -113,6 +150,12 @@ func (s *Service) notify(ctx context.Context, p *plant.Plant, kind string, due t
 	}
 	if len(devices) == 0 {
 		return 0 // nothing to push to; leave unmarked so a later registration can still get it
+	}
+	// Only wake devices whose local time is outside quiet hours. When every
+	// device is in its night the reminder stays unmarked and goes out later.
+	devices = awakeDevices(devices, s.now())
+	if len(devices) == 0 {
+		return 0
 	}
 
 	key := fmt.Sprintf("%s:%s:%d", kind, p.ID, due.Unix())

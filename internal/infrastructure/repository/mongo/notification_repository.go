@@ -45,7 +45,7 @@ now := time.Now().UTC()
 _, err := r.devices.UpdateOne(ctx,
 bson.M{"_id": d.Token},
 bson.M{
-"$set":         bson.M{"userId": d.UserID, "platform": d.Platform, "updatedAt": now},
+"$set":         bson.M{"userId": d.UserID, "platform": d.Platform, "timezone": d.Timezone, "utcOffsetMinutes": d.UTCOffsetMinutes, "updatedAt": now},
 "$setOnInsert": bson.M{"createdAt": now},
 },
 options.UpdateOne().SetUpsert(true),
