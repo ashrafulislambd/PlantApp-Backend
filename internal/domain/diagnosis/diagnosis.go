@@ -1,6 +1,10 @@
 package diagnosis
 
-import "time"
+import (
+	"fmt"
+	"strings"
+	"time"
+)
 
 // Disclaimer is always attached to a Diagnosis. Per project convention, AI
 // Doctor results are assistance, never a guaranteed diagnosis.
@@ -29,6 +33,11 @@ type Diagnosis struct {
 	CreatedAt  time.Time `json:"createdAt" bson:"createdAt"`
 	Provider   string    `json:"provider,omitempty" bson:"provider,omitempty"`
 
+	// Treated is set by the user ("Mark treated") once they acted on the
+	// advice. A treated scan no longer lowers the plant's health.
+	Treated   bool       `json:"treated" bson:"treated"`
+	TreatedAt *time.Time `json:"treatedAt,omitempty" bson:"treatedAt,omitempty"`
+
 	IssueBn      string `json:"-" bson:"issueBn,omitempty"`
 	CureBn       string `json:"-" bson:"cureBn,omitempty"`
 	DisclaimerBn string `json:"-" bson:"disclaimerBn,omitempty"`
@@ -37,6 +46,29 @@ ImageKey         string `json:"-" bson:"imageKey,omitempty"`
 ImageContentType string `json:"-" bson:"imageContentType,omitempty"`
 ImageURL         string `json:"imageUrl,omitempty" bson:"-"`
 }
+
+// SeverityNone is the severity of a scan that found nothing wrong ("healthy").
+const SeverityNone = "none"
+
+// NormalizeSeverity maps whatever a provider returned onto one of
+// "Mild", "Moderate", "Severe" or SeverityNone. Unknown or empty values
+// become "Mild" so that a real issue is never silently treated as healthy;
+// only an explicit none/healthy answer yields SeverityNone.
+func NormalizeSeverity(s string) string {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "none", "healthy", "no issue", "no_issue":
+		return SeverityNone
+	case "moderate", "medium":
+		return "Moderate"
+	case "severe", "high", "critical":
+		return "Severe"
+	default:
+		return "Mild"
+	}
+}
+
+// IsHealthy reports whether the scan found nothing wrong.
+func (d Diagnosis) IsHealthy() bool { return d.Severity == SeverityNone }
 
 // Localized returns a copy with Issue/Cure/Disclaimer swapped for their
 // Bengali translation when lang is "bn" and a translation exists.
@@ -48,4 +80,32 @@ func (d Diagnosis) Localized(lang string) Diagnosis {
 	d.Cure = d.CureBn
 	d.Disclaimer = d.DisclaimerBn
 	return d
+}
+
+// PromptText renders the scan as one bracketed line a language model can
+// read, e.g. "[Scan result: issue ...; cure ...]". Always English, whatever
+// the user's language, so the model sees consistent field names.
+func (d Diagnosis) PromptText() string {
+	parts := []string{"issue " + d.Issue, "cure " + d.Cure}
+	if d.Severity != "" {
+		parts = append(parts, "severity "+d.Severity)
+	}
+	if d.Confidence != "" {
+		parts = append(parts, "confidence "+d.Confidence)
+	}
+	if d.Fertilizer != "" {
+		parts = append(parts, "fertilizer "+d.Fertilizer)
+	}
+	return "[Scan result: " + strings.Join(parts, "; ") + "]"
+}
+
+// ChatSummary is the short assistant message saved in a chat session when a
+// photo is scanned from the chat, in the user's language (Bengali when lang
+// is "bn" and a translation exists). Markdown, like every assistant reply.
+func (d Diagnosis) ChatSummary(lang string) string {
+	l := d.Localized(lang)
+	if lang == "bn" && d.IssueBn != "" {
+		return fmt.Sprintf("আপনার ছবিটি বিশ্লেষণ করেছি।\n\n**সমস্যা:** %s\n\n**প্রস্তাবিত চিকিৎসা:** %s", l.Issue, l.Cure)
+	}
+	return fmt.Sprintf("I analysed your photo.\n\n**Issue:** %s\n\n**Suggested treatment:** %s", l.Issue, l.Cure)
 }

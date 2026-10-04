@@ -39,6 +39,15 @@ var mockDiagnoses = []diagnosis.AnalysisResult{
 		CureBn:     "শুকনো, গুঁড়ো করা কলার খোসা গাছের মূলের কাছের মাটিতে মিশিয়ে দিন।",
 		Provider:   aiprovider.Mock,
 	},
+	{
+		Issue:      "Your plant looks healthy. No problems found.",
+		Cure:       "Keep up your current watering and light. Rotate the pot a quarter turn weekly for even growth.",
+		Confidence: "Moderate",
+		Severity:   "None",
+		IssueBn:    "আপনার গাছটি সুস্থ দেখাচ্ছে। কোনো সমস্যা পাওয়া যায়নি।",
+		CureBn:     "বর্তমান পানি ও আলোর নিয়ম বজায় রাখুন। সমান বৃদ্ধির জন্য প্রতি সপ্তাহে টবটি সিকি ঘুরিয়ে দিন।",
+		Provider:   aiprovider.Mock,
+	},
 }
 
 type MockDiagnosisProvider struct {
@@ -49,7 +58,7 @@ func NewMockDiagnosisProvider() *MockDiagnosisProvider {
 	return &MockDiagnosisProvider{}
 }
 
-func (p *MockDiagnosisProvider) Analyze(_ context.Context, _ []byte) (diagnosis.AnalysisResult, error) {
+func (p *MockDiagnosisProvider) Analyze(_ context.Context, _ []byte, _ string) (diagnosis.AnalysisResult, error) {
 	i := p.counter.Add(1) - 1
 	return mockDiagnoses[int(i)%len(mockDiagnoses)], nil
 }

@@ -22,6 +22,10 @@ return &DeviceHandler{svc: svc}
 type deviceRequest struct {
 Token    string `json:"token"`
 Platform string `json:"platform"`
+// Timezone (IANA name) and UTCOffsetMinutes are optional; they keep
+// reminders out of the owner's local night.
+Timezone         string `json:"timezone,omitempty"`
+UTCOffsetMinutes *int   `json:"utcOffsetMinutes,omitempty"`
 }
 
 func decodeDeviceRequest(w http.ResponseWriter, r *http.Request) (deviceRequest, error) {
@@ -41,7 +45,7 @@ respond.Error(w, err)
 return
 }
 userID, _ := authmw.UserID(r.Context())
-if err := h.svc.RegisterDevice(r.Context(), userID, req.Token, req.Platform); err != nil {
+if err := h.svc.RegisterDeviceInZone(r.Context(), userID, req.Token, req.Platform, req.Timezone, req.UTCOffsetMinutes); err != nil {
 respond.Error(w, err)
 return
 }
